@@ -1,54 +1,55 @@
 # Changelog
 
+## v0.2.6 - Debug Baseline
+
+- Replaced the late inventory constructor/netvar patches with one early
+  `GetMaxItemSlots` wrapper so server inventory, client replica, HUD, and
+  `inventory_classified` all construct with 24 slots.
+- Restored backpack overflow behavior for bags equipped in the separate Bag slot.
+- Emits the vanilla `setoverflow` event when a dedicated-slot bag is equipped so
+  the HUD rebuilds its backpack container.
+- Uses vanilla `Inventory:SwapEquipment` for mannequin swaps to prevent restricted
+  equipment from becoming ownerless.
+- Sorting now leaves locked-slot items in place and skips their occupied slots.
+- Stack merging now checks the full vanilla `CanStackWith` contract first.
+- Inventory UI Scale now scales the shared inventory root instead of individual
+  slots, keeping item tiles and stack counters aligned.
+
+## v0.2.5 - UI + Inventory Slot Hotfix
+
+- Fixed slots 16-24 being visible but not accepting items.
+- Added a constructor-time inventory max slot patch instead of post-init writes.
+- Restored a fitted custom background around the compact 2 x 12 layout.
+- Keeps `bgcover` hidden to avoid the long vanilla strip stretching across the screen.
+- Background is now scaled from the actual slot bounds instead of a hardcoded full-screen scale.
+
+
+## v0.2.4 - UI Safe Layout
+
+- Fixed the v0.2.3 UI overlap issue by removing per-slot scaling.
+- Hid the old single-row inventory background because it stretches across the screen and does not fit the 2 x 12 grid.
+- Increased inventory slot spacing to vanilla-safe values.
+- Moved equipment slots farther right into a separated 3 x 2 block.
+- Sort and inventory item movement logic unchanged.
+
+
+## v0.2.3 - UI Hotfix
+
+- Fixed the 2 x 12 inventory layout growing downward off-screen.
+- New 2-row layout now grows upward from the bottom HUD:
+  - slots 1-12 on the upper row
+  - slots 13-24 on the lower row
+- Reduced horizontal spread by adding a configurable UI scale.
+- Reduced background stretching; the background should no longer cover the full screen width.
+- Kept the working sort / item movement logic from v0.2.2.
+
 ## v0.2.2 - Metatable Hotfix
 
 - Fixed startup crash: `attempt to call global 'getmetatable' (a nil value)`.
-- InventoryBar patch now uses `GLOBAL.getmetatable`.
-- Removed the class-table marker flag for the InventoryBar rebuild patch; the patch flag is now a local upvalue to avoid readonly/class-table issues.
-- Re-applies the 2 x 12 positioning pass after InventoryBar construction and rebuild.
+- InventoryBar patch uses `GLOBAL.getmetatable`.
+- InventoryBar rebuild patch flag is a local upvalue.
 
 ## v0.2.1 - Readonly Hotfix
 
+- Fixed startup crash: `Cannot change read only property`.
 - Removed direct writes to readonly inventory component properties.
-- Slot expansion now relies on `GetNumSlots` overrides and classified netvars.
-
-# Changelog
-
-## v0.2.1-readonly-hotfix
-
-- Fixed a server-start crash: `Cannot change read only property` at `modmain.lua:204`.
-- Removed the custom `self.maxslots` write from the inventory component post-init.
-- Kept slot expansion through `Inventory:GetNumSlots()` / `inventory_replica:GetNumSlots()` overrides and `inventory_classified` netvar expansion.
-- Changed internal widget/class patch flags to use `rawget` / `rawset` to avoid the same readonly issue later.
-- Removed the non-essential `inst.wet_prefix` write from item prefab post-init for safer startup.
-
-
-## 0.2.0-sort-core
-
-- Added configurable inventory sorting.
-- Added Sort Hotkey config: F5 / F6 / F7 / F8 / R / C / V.
-- Added Sort Mode config:
-  - Compact Only: preserves existing item order and closes empty gaps.
-  - Category Sort: groups similar items, then sorts by prefab name.
-- Added Merge Stacks on Sort config.
-- Sort requests now run through a Mod RPC so item movement happens server-side.
-- Quick Draw remains intentionally excluded.
-
-## 0.1.0-clean-core
-
-- Replaced the large extra-slot mod structure with a small local registry.
-- Removed Quick Draw from the design.
-- Added optional 24-slot inventory foundation.
-- Added a conservative 2 x 12 inventory bar repositioning pass.
-- Added optional Bag, Armor and Accessory equipment slots.
-- Kept item compatibility vanilla-only for safer testing.
-- Added Debug Mode: Off / Log Only / Chat + Log.
-- Removed the huge modded prefab compatibility table from the active code.
-- Removed experimental multi-equipment render logic from the active code.
-- Reworked mannequin and punching bag compatibility to use the enabled slot list instead of hardcoded extra slots.
-
-## Planned next
-
-- Sort UI button near the inventory bar.
-- Better final UI positioning/polish after in-game testing.
-- Optional compatibility table for selected modded items.

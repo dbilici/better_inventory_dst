@@ -1,22 +1,23 @@
 name = "Better Inventory"
 description = [[
-Expanded inventory foundation for Don't Starve Together.
+Expanded inventory + utility equipment slots + inventory sort for Don't Starve Together.
 
-Current metatable hotfix build:
+Current debug baseline build:
 - Optional 24-slot inventory foundation
-- 2 x 12 inventory bar layout pass
+- Unified server/client/classified slot count for usable slots 16-24
+- Compact 2 x 12 inventory bar layout
+- Fitted custom background for the 2-row layout
 - Separate optional Bag / Armor / Accessory equip slots
+- Dedicated bag slot keeps vanilla overflow-container behavior
 - Vanilla-only item slot rules for safer testing
+- Inventory sort hotkey with optional stack merging
+- Locked-slot items remain fixed during sorting
 - Debug mode for log/chat diagnostics
-- Inventory sorting through a configurable hotkey
-- Optional stack merging and category sorting
-- Startup readonly crash hotfix for inventory component patching
-- InventoryBar metatable sandbox hotfix
 
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.2.2-metatable-hotfix"
+version = "0.2.6-debug-baseline"
 api_version = 10
 priority = 100
 
@@ -31,9 +32,7 @@ server_filter_tags = {
     "inventory",
     "expanded inventory",
     "equipment slots",
-    "bag slot",
-    "armor slot",
-    "accessory slot",
+    "inventory sort",
 }
 
 icon_atlas = "images/modicon.xml"
@@ -61,9 +60,20 @@ configuration_options = {
         hover = "Layout for the expanded inventory bar.",
         options = {
             {description = "Vanilla", data = "vanilla"},
-            {description = "2 x 12", data = "2x12"},
+            {description = "Compact 2 x 12", data = "2x12"},
         },
         default = "2x12",
+    },
+    {
+        name = "ui_scale",
+        label = "Inventory UI Scale",
+        hover = "Smaller values keep the 2-row inventory from stretching across the screen.",
+        options = {
+            {description = "Small", data = 0.78},
+            {description = "Compact", data = 0.85},
+            {description = "Large", data = 0.92},
+        },
+        default = 0.85,
     },
     {
         name = "slot_bag",
@@ -86,7 +96,6 @@ configuration_options = {
         options = boolean_options,
         default = true,
     },
-
     {
         name = "sort_enabled",
         label = "Inventory Sort",

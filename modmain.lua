@@ -1,15 +1,16 @@
 -- Better Inventory
--- Clean-core merged foundation.
+-- v0.2.6 debug baseline.
 --
--- Goals for this build:
---   1. Keep the inventory expansion logic small and readable.
---   2. Register extra equipment slots without global namespace pollution.
---   3. Use vanilla-only item rules first; mod compatibility can be added later.
---   4. Remove Quick Draw entirely. Vanilla quick equip/swap already covers that role.
+-- Main goals:
+--   - 24-slot inventory foundation.
+--   - Compact 2 x 12 UI that grows upward from the bottom HUD instead of
+--     extending below the screen.
+--   - Optional Bag / Armor / Accessory equip slots.
+--   - Inventory sort through server RPC.
+--   - No Quick Draw.
 
 local GLOBAL = GLOBAL
 local require = GLOBAL.require
-local net_entity = GLOBAL.net_entity
 
 local EQUIPSLOTS = GLOBAL.EQUIPSLOTS
 local HUD_ATLAS = GLOBAL.HUD_ATLAS
@@ -34,6 +35,7 @@ Assets = {
 local CONFIG = {
     inventory_size = GetModConfigData("inventory_size") or 24,
     inventory_layout = GetModConfigData("inventory_layout") or "2x12",
+    ui_scale = GetModConfigData("ui_scale") or 0.85,
     slot_bag = GetModConfigData("slot_bag") ~= false,
     slot_armor = GetModConfigData("slot_armor") ~= false,
     slot_accessory = GetModConfigData("slot_accessory") ~= false,
@@ -47,6 +49,7 @@ local CONFIG = {
 local MAX_ITEM_SLOTS = CONFIG.inventory_size == 24 and 24 or 15
 local USE_EXPANDED_INVENTORY = MAX_ITEM_SLOTS > 15
 local USE_2X12_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12"
+local UI_SCALE = CONFIG.ui_scale or 0.85
 
 --------------------------------------------------------------------------
 -- Debug helper
@@ -113,16 +116,8 @@ local function IsExtraSlotEnabled(key)
     return SLOT_DEFS[key] ~= nil and SLOT_DEFS[key].enabled
 end
 
-local function GetSlotForRule(rule)
-    local def = SLOT_DEFS[rule]
-    return def ~= nil and def.enabled and def.eslot or EQUIPSLOTS.BODY
-end
-
 --------------------------------------------------------------------------
 -- Vanilla-only item slot rules
---
--- Keep this list intentionally small while stabilizing the merged mod.
--- Large modded compatibility tables should be added later as a separate layer.
 --------------------------------------------------------------------------
 
 local ITEM_SLOT_RULES = {
@@ -172,7 +167,6 @@ local function ApplyEquipSlotRule(inst, rule)
     if GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld.ismastersim then
         if inst.components ~= nil and inst.components.equippable ~= nil then
             inst.components.equippable.equipslot = def.eslot
-
             DebugLog("Assigned " .. tostring(inst.prefab) .. " to " .. def.label .. " slot")
         else
             DebugLog("Skipped " .. tostring(inst.prefab) .. ": missing equippable component")
@@ -191,54 +185,94 @@ end
 --------------------------------------------------------------------------
 
 if USE_EXPANDED_INVENTORY then
-    local Inventory = require("components/inventory")
-    local InventoryReplica = require("components/inventory_replica")
-
-    -- Do not write new fields onto the inventory component instance here.
-    -- DST class instances can be read-only after construction, and setting a
-    -- custom self.maxslots field caused a startup crash. Expanding GetNumSlots
-    -- is enough for the server-side inventory logic; inventory_classified below
-    -- handles client replication for slots 16-24.
-
-    if Inventory ~= nil and Inventory.GetNumSlots ~= nil then
-        local Inventory_GetNumSlots_Base = Inventory.GetNumSlots
-        function Inventory:GetNumSlots(...)
-            local base = Inventory_GetNumSlots_Base(self, ...)
-            return math.max(base or 0, MAX_ITEM_SLOTS)
-        end
-    end
-
-    if InventoryReplica ~= nil then
-        local InventoryReplica_GetNumSlots_Base = InventoryReplica.GetNumSlots
-        function InventoryReplica:GetNumSlots(...)
-            local base = InventoryReplica_GetNumSlots_Base ~= nil and InventoryReplica_GetNumSlots_Base(self, ...) or 0
-            return math.max(base or 0, MAX_ITEM_SLOTS)
-        end
-    end
-
-    AddPrefabPostInit("inventory_classified", function(inst)
-        -- Client inventory replication only has vanilla item netvars by default.
-        -- Extra slots need their own net_entity entries or clients can desync visually.
-        if inst._items ~= nil and #inst._items < MAX_ITEM_SLOTS then
-            for i = #inst._items + 1, MAX_ITEM_SLOTS do
-                table.insert(inst._items, net_entity(inst.GUID, "inventory._items[" .. tostring(i) .. "]", "items[" .. tostring(i) .. "]dirty"))
+    -- All three vanilla layers (server inventory, client replica and
+    -- inventory_classified netvars) ask this function for their slot count.
+    -- Patching it before prefabs are constructed keeps those layers in sync and
+    -- avoids late writes to readonly component fields or post-pristine netvars.
+    local GetMaxItemSlots_Base = GLOBAL.GetMaxItemSlots
+    if GetMaxItemSlots_Base ~= nil then
+        GLOBAL.GetMaxItemSlots = function(game_mode)
+            local base = GetMaxItemSlots_Base(game_mode) or 0
+            if game_mode == "quagmire" then
+                return base
             end
-            DebugLog("inventory_classified netvars expanded to " .. tostring(MAX_ITEM_SLOTS))
+            return math.max(base, MAX_ITEM_SLOTS)
+        end
+    else
+        GLOBAL.error("Better Inventory: GetMaxItemSlots is unavailable")
+    end
+end
+
+--------------------------------------------------------------------------
+-- Separate bag slot / overflow-container compatibility
+--------------------------------------------------------------------------
+
+if IsExtraSlotEnabled("BAG") then
+    local Inventory = require("components/inventory")
+    local BAG_SLOT = SLOT_DEFS.BAG.eslot
+
+    -- Vanilla only checks EQUIPSLOTS.BODY for a backpack. Once bags move to a
+    -- dedicated slot, server inventory routing and crafting must check it first.
+    local Inventory_GetOverflowContainer_Base = Inventory.GetOverflowContainer
+    function Inventory:GetOverflowContainer(...)
+        if self.ignoreoverflow then
+            return nil
+        end
+
+        local bag = self:GetEquippedItem(BAG_SLOT)
+        if bag ~= nil and bag.components ~= nil and bag.components.container ~= nil
+            and bag.components.container.canbeopened then
+            return bag.components.container
+        end
+
+        return Inventory_GetOverflowContainer_Base(self, ...)
+    end
+
+    -- BODY equipment automatically emits setoverflow; a custom bag slot does
+    -- not. Emit the same event so the HUD rebuilds when a bag is equipped.
+    local Inventory_Equip_Base = Inventory.Equip
+    function Inventory:Equip(item, ...)
+        local eslot = item ~= nil and item.components ~= nil and item.components.equippable ~= nil
+            and item.components.equippable.equipslot or nil
+        local equipped = Inventory_Equip_Base(self, item, ...)
+
+        if equipped and eslot == BAG_SLOT and item.components.container ~= nil then
+            self.inst:PushEvent("setoverflow", { overflow = item })
+        end
+
+        return equipped
+    end
+
+    -- On clients InventoryReplica delegates to this classified method. Replace
+    -- the exported method after prefab construction while preserving vanilla as
+    -- a fallback for BODY-slot containers and unusual game modes.
+    AddPrefabPostInit("inventory_classified", function(inst)
+        if inst.GetOverflowContainer == nil or inst.GetEquippedItem == nil then
+            return
+        end
+
+        local GetOverflowContainer_Base = inst.GetOverflowContainer
+        inst.GetOverflowContainer = function(self, ...)
+            if self.ignoreoverflow then
+                return nil
+            end
+
+            local bag = self:GetEquippedItem(BAG_SLOT)
+            if bag ~= nil and bag.replica ~= nil and bag.replica.container ~= nil then
+                return bag.replica.container
+            end
+
+            return GetOverflowContainer_Base(self, ...)
         end
     end)
 end
 
 --------------------------------------------------------------------------
 -- Inventory bar UI
---
--- Cleanup note:
--- We intentionally do not replace the full vanilla Rebuild implementation.
--- Vanilla still creates all slots; we only add extra equip slots and reposition
--- inventory/equipment slots afterward. This avoids copying old Klei internals.
 --------------------------------------------------------------------------
 
 local function AddExtraEquipSlotsToInventoryBar(self)
-    if TheNet ~= nil and TheNet:GetServerGameMode() == "quagmire" then
+    if TheNet ~= nil and TheNet.GetServerGameMode ~= nil and TheNet:GetServerGameMode() == "quagmire" then
         return
     end
 
@@ -247,8 +281,6 @@ local function AddExtraEquipSlotsToInventoryBar(self)
     end
     GLOBAL.rawset(self, "_betterinventory_extra_slots_added", true)
 
-    -- Keep body slot as the generic torso/clothing slot. Bags, armor and amulets
-    -- receive their own optional slots.
     local sortkey_start = 1
     local sortkey_delta = 1 / (#ENABLED_EXTRA_SLOTS + 1)
 
@@ -257,33 +289,91 @@ local function AddExtraEquipSlotsToInventoryBar(self)
     end
 end
 
+local INVENTORY_BG_TEX = "inventory_bg.tex"
+local INVENTORY_BG_WIDTH = 1352
+local INVENTORY_BG_HEIGHT = 204
+
+local function FitInventoryBarBackground(self, min_x, max_x, min_y, max_y)
+    -- Keep a real background, but fit it to the compact two-row layout.
+    -- v0.2.4 hid the background entirely; v0.2.3 scaled it too aggressively.
+    -- This uses the uploaded inventory_bg texture dimensions and positions it
+    -- around the actual slot bounds instead of stretching it across the screen.
+    if self.bg ~= nil then
+        if self.bg.SetTexture ~= nil then
+            self.bg:SetTexture(INVENTORY_BG_ATLAS, INVENTORY_BG_TEX)
+        end
+        if self.bg.Show ~= nil then
+            self.bg:Show()
+        end
+        if self.bg.SetPosition ~= nil then
+            self.bg:SetPosition((min_x + max_x) / 2, (min_y + max_y) / 2, 0)
+        end
+        if self.bg.SetScale ~= nil then
+            local target_width = (max_x - min_x) + 110
+            local target_height = (max_y - min_y) + 70
+            self.bg:SetScale(target_width / INVENTORY_BG_WIDTH, target_height / INVENTORY_BG_HEIGHT, 1)
+        end
+    end
+
+    -- bgcover is the part that tends to create the long vanilla strip. Keep it
+    -- hidden while we use our fitted custom background.
+    if self.bgcover ~= nil and self.bgcover.Hide ~= nil then
+        self.bgcover:Hide()
+    end
+end
+
 local function Reposition2x12InventoryBar(self)
     if not USE_2X12_LAYOUT or self.inv == nil then
         return
     end
 
-    local W = 68
-    local SEP = 12
-    local ROW_SEP = 8
+    -- UI safe layout:
+    -- Do not scale individual slots. Scaling the slot widget also scales/offsets
+    -- ItemTile children in ways that can make stack counters overlap. Instead,
+    -- keep vanilla-ish slot size and only move the slots into a two-row grid.
     local COLUMNS = 12
-    local inventory_width = COLUMNS * W + (COLUMNS - 1) * SEP
-    local row_step = W + ROW_SEP
+    local SLOT_STEP = 70
+    local ROW_STEP = 70
+    local inventory_half_width = ((COLUMNS - 1) * SLOT_STEP) / 2
+    local top_row_y = ROW_STEP
+    local bottom_row_y = 0
+    local slot_half_size = 34
+    local min_x = 999999
+    local max_x = -999999
+    local min_y = 999999
+    local max_y = -999999
+
+    -- Scale the common root instead of individual slot widgets. This keeps item
+    -- tiles and counters aligned while making the config option effective.
+    if self.root ~= nil and self.root.SetScale ~= nil then
+        self.root:SetScale(UI_SCALE, UI_SCALE, 1)
+    end
 
     for slot_index, slot in pairs(self.inv) do
         if type(slot_index) == "number" and slot ~= nil and slot.SetPosition ~= nil then
             local index = slot_index - 1
             local col = index % COLUMNS
             local row = math.floor(index / COLUMNS)
-            local x = -inventory_width / 2 + W / 2 + col * (W + SEP)
-            local y = row == 0 and row_step / 2 or -row_step / 2
+            local x = -inventory_half_width + col * SLOT_STEP
+            local y = row == 0 and top_row_y or bottom_row_y
+
             slot:SetPosition(x, y, 0)
+            min_x = math.min(min_x, x - slot_half_size)
+            max_x = math.max(max_x, x + slot_half_size)
+            min_y = math.min(min_y, y - slot_half_size)
+            max_y = math.max(max_y, y + slot_half_size)
+            if slot.SetScale ~= nil then
+                slot:SetScale(1, 1, 1)
+            end
         end
     end
 
-    -- Put equipment slots to the right as a compact 3-column block.
+    -- Equipment slots: a clearly separated 3 x 2 block on the right.
+    -- This avoids the overlap seen in v0.2.3 where equip slots started too close
+    -- to the inventory grid after UI scaling.
     if self.equip ~= nil and self.equipslotinfo ~= nil then
-        local equip_start_x = inventory_width / 2 + 72
-        local equip_start_y = row_step / 2
+        local equip_start_x = inventory_half_width + 110
+        local equip_top_y = top_row_y
         local equip_columns = 3
 
         for i, info in ipairs(self.equipslotinfo) do
@@ -292,18 +382,22 @@ local function Reposition2x12InventoryBar(self)
                 local index = i - 1
                 local col = index % equip_columns
                 local row = math.floor(index / equip_columns)
-                slot:SetPosition(equip_start_x + col * (W + SEP), equip_start_y - row * row_step, 0)
+                local x = equip_start_x + col * SLOT_STEP
+                local y = equip_top_y - row * ROW_STEP
+                slot:SetPosition(x, y, 0)
+                min_x = math.min(min_x, x - slot_half_size)
+                max_x = math.max(max_x, x + slot_half_size)
+                min_y = math.min(min_y, y - slot_half_size)
+                max_y = math.max(max_y, y + slot_half_size)
+                if slot.SetScale ~= nil then
+                    slot:SetScale(1, 1, 1)
+                end
             end
         end
     end
 
-    -- Background scaling is intentionally conservative. The old mod stretched a
-    -- single-row background heavily; this keeps the bar readable for testing.
-    if self.bg ~= nil and self.bg.SetScale ~= nil then
-        self.bg:SetScale(2.15, 1.65, 1)
-    end
-    if self.bgcover ~= nil and self.bgcover.SetScale ~= nil then
-        self.bgcover:SetScale(2.15, 1.65, 1)
+    if min_x < max_x and min_y < max_y then
+        FitInventoryBarBackground(self, min_x, max_x, min_y, max_y)
     end
 end
 
@@ -312,9 +406,6 @@ local inventory_bar_rebuild_patched = false
 AddClassPostConstruct("widgets/inventorybar", function(self)
     AddExtraEquipSlotsToInventoryBar(self)
 
-    -- DST's mod environment does not always expose Lua's plain getmetatable
-    -- in the sandbox. Use GLOBAL.getmetatable and keep the patch flag as a
-    -- local upvalue instead of writing marker fields into Klei class tables.
     if not inventory_bar_rebuild_patched then
         local mt = GLOBAL.getmetatable ~= nil and GLOBAL.getmetatable(self) or nil
         local InventoryBarClass = mt ~= nil and mt.__index or nil
@@ -382,11 +473,12 @@ if IsExtraSlotEnabled("ACCESSORY") then
     end)
 
     local RecipePopup = require("widgets/recipepopup")
-    if RecipePopup ~= nil and RecipePopup.Refresh ~= nil and not GLOBAL.rawget(RecipePopup, "_betterinventory_refresh_patched") then
-        GLOBAL.rawset(RecipePopup, "_betterinventory_refresh_patched", true)
+    local recipepopup_refresh_patched = false
+    if RecipePopup ~= nil and RecipePopup.Refresh ~= nil and not recipepopup_refresh_patched then
+        recipepopup_refresh_patched = true
         local Refresh_Base = RecipePopup.Refresh
         function RecipePopup:Refresh(...)
-            Refresh_Base(self, ...)
+            local result = Refresh_Base(self, ...)
 
             if self.button ~= nil and self.button.IsVisible ~= nil and self.button:IsVisible()
                 and self.owner ~= nil and self.owner.replica ~= nil and self.owner.replica.inventory ~= nil
@@ -397,6 +489,8 @@ if IsExtraSlotEnabled("ACCESSORY") then
                     self.amulet:Show()
                 end
             end
+
+            return result
         end
     end
 end
@@ -444,24 +538,14 @@ local function SwapEquipmentSlot(inst, doer, eslot)
         return false
     end
 
-    local doer_item = doer.components.inventory:Unequip(eslot)
-    local inst_item = inst.components.inventory:Unequip(eslot)
-
-    if doer_item == nil and inst_item == nil then
+    if doer.components.inventory:GetEquippedItem(eslot) == nil
+        and inst.components.inventory:GetEquippedItem(eslot) == nil then
         return false
     end
 
-    if inst_item ~= nil and inst_item.components ~= nil and inst_item.components.equippable ~= nil
-        and not inst_item.components.equippable:IsRestricted(doer) then
-        doer.components.inventory:Equip(inst_item)
-    end
-
-    if doer_item ~= nil and doer_item.components ~= nil and doer_item.components.equippable ~= nil
-        and not doer_item.components.equippable:IsRestricted(inst) then
-        inst.components.inventory:Equip(doer_item)
-    end
-
-    return true
+    -- Vanilla handles restricted equipment and failed equips by returning items
+    -- to an inventory. The old custom swap could leave either item ownerless.
+    return inst.components.inventory:SwapEquipment(doer, eslot)
 end
 
 local function ShouldAcceptEquipmentItem(inst, item, doer)
@@ -479,7 +563,7 @@ local function ShouldAcceptEquipmentItem(inst, item, doer)
     return false, "GENERIC"
 end
 
-if GLOBAL.TheNet ~= nil and GLOBAL.TheNet:GetIsServer() then
+if GLOBAL.TheNet ~= nil and GLOBAL.TheNet.GetIsServer ~= nil and GLOBAL.TheNet:GetIsServer() then
     AddPrefabPostInit("sewing_mannequin", function(inst)
         if inst.components == nil or inst.components.activatable == nil or inst.components.trader == nil then
             return
@@ -524,14 +608,8 @@ if GLOBAL.TheNet ~= nil and GLOBAL.TheNet:GetIsServer() then
     end)
 end
 
-
-
 --------------------------------------------------------------------------
 -- Inventory sorting
---
--- Sorting is requested from the client through a Mod RPC, then executed on
--- the server-side inventory component. This keeps item movement authoritative
--- and avoids client-only desyncs.
 --------------------------------------------------------------------------
 
 local SORT_RPC_NAMESPACE = "BetterInventory"
@@ -658,6 +736,8 @@ local function CanMergeStacks(target, source)
 
     return target_stack ~= nil
         and source_stack ~= nil
+        and target_stack.CanStackWith ~= nil
+        and target_stack:CanStackWith(source)
         and target_stack.IsFull ~= nil
         and not target_stack:IsFull()
 end
@@ -668,7 +748,6 @@ local function TryMergeStackInto(target, source)
     end
 
     local target_stack = target.components.stackable
-    local source_stack = source.components.stackable
 
     if target_stack.Put ~= nil then
         target_stack:Put(source)
@@ -676,29 +755,6 @@ local function TryMergeStackInto(target, source)
             or source.components == nil
             or source.components.stackable == nil
             or source.components.stackable:StackSize() <= 0
-    end
-
-    -- Conservative fallback for environments where Put is unavailable.
-    if target_stack.StackSize ~= nil and target_stack.MaxSize ~= nil and target_stack.SetStackSize ~= nil
-        and source_stack.StackSize ~= nil and source_stack.SetStackSize ~= nil then
-        local target_size = target_stack:StackSize()
-        local source_size = source_stack:StackSize()
-        local room = math.max(0, target_stack:MaxSize() - target_size)
-        local moved = math.min(room, source_size)
-
-        if moved <= 0 then
-            return false
-        end
-
-        target_stack:SetStackSize(target_size + moved)
-        source_stack:SetStackSize(source_size - moved)
-
-        if source_stack:StackSize() <= 0 then
-            source:Remove()
-            return true
-        end
-
-        return false
     end
 
     return false
@@ -771,15 +827,22 @@ local function SortInventoryForPlayer(player)
     num_slots = math.min(num_slots or MAX_ITEM_SLOTS, MAX_ITEM_SLOTS)
 
     local items = {}
+    local occupied_slots = {}
 
     for slot = 1, num_slots do
         local item = inventory:GetItemInSlot(slot)
         if item ~= nil then
-            local removed = inventory:RemoveItem(item, true)
-            if removed ~= nil then
-                table.insert(items, removed)
+            local inventoryitem = item.components ~= nil and item.components.inventoryitem or nil
+            if inventoryitem ~= nil and inventoryitem.islockedinslot then
+                occupied_slots[slot] = true
             else
-                table.insert(items, item)
+                local removed = inventory:RemoveItem(item, true)
+                if removed ~= nil then
+                    table.insert(items, removed)
+                else
+                    occupied_slots[slot] = true
+                    DebugLog("Sort kept item in slot " .. tostring(slot) .. ": removal failed")
+                end
             end
         end
     end
@@ -790,8 +853,21 @@ local function SortInventoryForPlayer(player)
     local slot = 1
     for _, item in ipairs(items) do
         if item ~= nil and item:IsValid() then
-            inventory:GiveItem(item, slot)
-            slot = slot + 1
+            while slot <= num_slots and (occupied_slots[slot] or inventory:GetItemInSlot(slot) ~= nil) do
+                slot = slot + 1
+            end
+
+            if slot > num_slots then
+                DebugLog("Sort ran out of slots; returning " .. tostring(item.prefab))
+                inventory:GiveItem(item)
+            else
+                local given = inventory:GiveItem(item, slot)
+                if not given then
+                    DebugLog("Sort could not place " .. tostring(item.prefab) .. " in slot " .. tostring(slot))
+                    inventory:GiveItem(item)
+                end
+                slot = slot + 1
+            end
         end
     end
 
@@ -805,7 +881,7 @@ if CONFIG.sort_enabled then
         SortInventoryForPlayer(player)
     end)
 
-    if not (TheNet ~= nil and TheNet:IsDedicated()) then
+    if not (TheNet ~= nil and TheNet.IsDedicated ~= nil and TheNet:IsDedicated()) then
         local KEY_MAP = {
             KEY_F5 = GLOBAL.KEY_F5,
             KEY_F6 = GLOBAL.KEY_F6,
@@ -854,8 +930,9 @@ if CONFIG.sort_enabled then
     end
 end
 
-DebugLog("Loaded sort core. Inventory slots=" .. tostring(MAX_ITEM_SLOTS)
+DebugLog("Loaded debug baseline. Inventory slots=" .. tostring(MAX_ITEM_SLOTS)
     .. ", layout=" .. tostring(CONFIG.inventory_layout)
+    .. ", ui_scale=" .. tostring(UI_SCALE)
     .. ", bag=" .. tostring(CONFIG.slot_bag)
     .. ", armor=" .. tostring(CONFIG.slot_armor)
     .. ", accessory=" .. tostring(CONFIG.slot_accessory)
