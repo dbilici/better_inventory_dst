@@ -2,6 +2,10 @@
 
 This pass freezes feature work and focuses on server/client invariants.
 
+Known-fix regression check: place two full torches and one partially used torch
+in a deliberate relative order, sort repeatedly, and verify that their relative
+order remains unchanged.
+
 Test matrix:
 
 1. Host a world, fill slots 16-24, and connect a second client after the items

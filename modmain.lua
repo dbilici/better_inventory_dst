@@ -990,6 +990,14 @@ local function SortItemsForInventory(items)
         return items
     end
 
+    -- Lua's table.sort is not stable. Remember the current order so otherwise
+    -- equal items (for example torches with different durability) do not swap
+    -- positions unpredictably between repeated sorts.
+    local original_order = {}
+    for index, item in ipairs(items) do
+        original_order[item] = index
+    end
+
     table.sort(items, function(a, b)
         local ca = GetInventorySortCategory(a)
         local cb = GetInventorySortCategory(b)
@@ -1005,7 +1013,11 @@ local function SortItemsForInventory(items)
 
         local sa = a.components ~= nil and a.components.stackable ~= nil and a.components.stackable.StackSize ~= nil and a.components.stackable:StackSize() or 1
         local sb = b.components ~= nil and b.components.stackable ~= nil and b.components.stackable.StackSize ~= nil and b.components.stackable:StackSize() or 1
-        return sa > sb
+        if sa ~= sb then
+            return sa > sb
+        end
+
+        return original_order[a] < original_order[b]
     end)
 
     return items

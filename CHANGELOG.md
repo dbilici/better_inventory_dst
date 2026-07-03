@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Made category sorting stable for otherwise equal items. Identical items such
+  as torches now preserve their original relative slot order regardless of
+  durability, so repeated sorts no longer reshuffle them unpredictably.
+
 ## v0.2.7 - Multiplayer Core
 
 - Replaced generic `extrabody1/2/3` identifiers with namespaced Better Inventory
