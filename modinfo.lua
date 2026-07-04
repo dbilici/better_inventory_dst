@@ -2,7 +2,7 @@ name = "Better Inventory"
 description = [[
 Expanded inventory + utility equipment slots + inventory sort for Don't Starve Together.
 
-Current multiplayer core build:
+Current v0.5.0 release candidate:
 - Optional 24-slot inventory foundation
 - Unified server/client/classified slot count for usable slots 16-24
 - Namespaced equipment slots to avoid collisions with other mods
@@ -26,7 +26,7 @@ Current multiplayer core build:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.5.0-quick-stack"
+version = "0.5.0-rc1"
 api_version = 10
 priority = 100
 

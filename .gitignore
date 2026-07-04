@@ -39,3 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+# Local OS/editor files
+.DS_Store
+**/.DS_Store
+*.log
+*.swp
+*.tmp
