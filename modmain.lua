@@ -43,6 +43,8 @@ local CONFIG = {
     sort_mode = GetModConfigData("sort_mode") or "category",
     sort_merge_stacks = GetModConfigData("sort_merge_stacks") ~= false,
     sort_key = GetModConfigData("sort_key") or "KEY_F5",
+    slot_lock_enabled = GetModConfigData("slot_lock_enabled") ~= false,
+    slot_lock_key = GetModConfigData("slot_lock_key") or "KEY_L",
     debug_mode = GetModConfigData("debug_mode") or "off",
 }
 
@@ -50,7 +52,7 @@ local MAX_ITEM_SLOTS = CONFIG.inventory_size == 24 and 24 or 15
 local USE_EXPANDED_INVENTORY = MAX_ITEM_SLOTS > 15
 local USE_2X12_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12"
 local UI_SCALE = CONFIG.ui_scale or 0.85
-local CORE_PROTOCOL_VERSION = 1
+local CORE_PROTOCOL_VERSION = 2
 local CORE_RPC_NAMESPACE = "BetterInventoryCore"
 
 --------------------------------------------------------------------------
@@ -339,6 +341,192 @@ if not (TheNet ~= nil and TheNet.IsDedicated ~= nil and TheNet:IsDedicated()) th
 end
 
 --------------------------------------------------------------------------
+-- Manual inventory slot locks
+--------------------------------------------------------------------------
+
+local SLOT_LOCK_RPC_NAMESPACE = "BetterInventorySlotLocks"
+local SLOT_LOCK_TOGGLE_RPC = "Toggle"
+local SLOT_LOCK_SYNC_RPC = "Sync"
+local SLOT_LOCK_STATE_RPC = "State"
+local SLOT_LOCK_REQUEST_COOLDOWN = 0.10
+local SLOT_LOCK_REQUEST_STATE = GLOBAL.setmetatable({}, { __mode = "k" })
+local CLIENT_LOCKED_SLOTS = {}
+local ACTIVE_INVENTORY_BAR = nil
+
+local function DecodeLockedSlots(serialized)
+    local slots = {}
+    for value in GLOBAL.string.gmatch(tostring(serialized or ""), "%d+") do
+        local slot = GLOBAL.tonumber(value)
+        if slot ~= nil and slot >= 1 and slot <= MAX_ITEM_SLOTS then
+            slots[slot] = true
+        end
+    end
+    return slots
+end
+
+local function EnsureSlotLockIndicator(slot)
+    if slot == nil or slot._betterinventory_lock_indicator ~= nil then
+        return slot ~= nil and slot._betterinventory_lock_indicator or nil
+    end
+
+    local Image = require("widgets/image")
+    local indicator = slot:AddChild(Image(HUD_ATLAS, "craft_slot_locked.tex"))
+    indicator:SetPosition(20, 20, 0)
+    indicator:SetScale(0.55, 0.55, 1)
+    indicator:SetClickable(false)
+    indicator:Hide()
+    slot._betterinventory_lock_indicator = indicator
+
+    local OnTileChanged_Base = slot.ontilechangedfn
+    slot:SetOnTileChangedFn(function(tile)
+        if OnTileChanged_Base ~= nil then
+            OnTileChanged_Base(tile)
+        end
+        indicator:MoveToFront()
+    end)
+
+    return indicator
+end
+
+
+local function RefreshSlotLockVisuals()
+    local bar = ACTIVE_INVENTORY_BAR
+    if bar == nil or bar.inv == nil then
+        return
+    end
+
+    for slot_index, slot in pairs(bar.inv) do
+        if type(slot_index) == "number" and slot ~= nil then
+            local indicator = EnsureSlotLockIndicator(slot)
+            if indicator ~= nil then
+                if CLIENT_LOCKED_SLOTS[slot_index] then
+                    indicator:Show()
+                    indicator:MoveToFront()
+                else
+                    indicator:Hide()
+                end
+            end
+        end
+    end
+end
+
+local function SendSlotLockState(player)
+    local component = player ~= nil and player.components ~= nil
+        and player.components.betterinventory_slotlocks or nil
+    if component == nil or player.userid == nil then
+        return
+    end
+
+    local rpc = GLOBAL.GetClientModRPC(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_STATE_RPC)
+    GLOBAL.SendModRPCToClient(rpc, player.userid, component:GetSerialized())
+end
+
+if CONFIG.slot_lock_enabled then
+    AddPlayerPostInit(function(inst)
+        if GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld.ismastersim
+            and inst.components ~= nil and inst.components.betterinventory_slotlocks == nil then
+            inst:AddComponent("betterinventory_slotlocks")
+        end
+    end)
+
+    AddClientModRPCHandler(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_STATE_RPC, function(serialized)
+        CLIENT_LOCKED_SLOTS = DecodeLockedSlots(serialized)
+        RefreshSlotLockVisuals()
+    end)
+
+    AddModRPCHandler(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_SYNC_RPC, function(player)
+        SendSlotLockState(player)
+    end)
+
+    AddModRPCHandler(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_TOGGLE_RPC, function(player, requested_slot)
+        local component = player ~= nil and player.components ~= nil
+            and player.components.betterinventory_slotlocks or nil
+        local inventory = player ~= nil and player.components ~= nil and player.components.inventory or nil
+        local slot = GLOBAL.tonumber(requested_slot)
+        if component == nil or inventory == nil or slot == nil then
+            return
+        end
+
+        slot = GLOBAL.math.floor(slot)
+        local num_slots = inventory.GetNumSlots ~= nil and inventory:GetNumSlots() or 0
+        if slot < 1 or slot > num_slots or slot > MAX_ITEM_SLOTS then
+            DebugWarn("Rejected invalid slot-lock request: " .. tostring(requested_slot))
+            return
+        end
+
+        local now = GLOBAL.GetTime()
+        local last_request = SLOT_LOCK_REQUEST_STATE[player] or -SLOT_LOCK_REQUEST_COOLDOWN
+        if now - last_request < SLOT_LOCK_REQUEST_COOLDOWN then
+            return
+        end
+        SLOT_LOCK_REQUEST_STATE[player] = now
+
+        local locked = component:Toggle(slot)
+        DebugLog("Slot " .. tostring(slot) .. (locked and " locked" or " unlocked")
+            .. " for " .. tostring(player.userid or player.GUID))
+        SendSlotLockState(player)
+    end)
+
+    if not (TheNet ~= nil and TheNet.IsDedicated ~= nil and TheNet:IsDedicated()) then
+        local function SendSlotLockSync(inst, attempt)
+            if inst == nil or not inst:IsValid() then
+                return
+            end
+
+            if inst == GLOBAL.ThePlayer then
+                local rpc = GLOBAL.GetModRPC(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_SYNC_RPC)
+                GLOBAL.SendModRPCToServer(rpc)
+            elseif (attempt or 1) < 4 then
+                inst:DoTaskInTime(0.5, function()
+                    SendSlotLockSync(inst, (attempt or 1) + 1)
+                end)
+            end
+        end
+
+        AddPlayerPostInit(function(inst)
+            inst:DoTaskInTime(0.75, function()
+                SendSlotLockSync(inst, 1)
+            end)
+        end)
+
+        local LOCK_KEY_MAP = {
+            KEY_L = GLOBAL.KEY_L,
+            KEY_K = GLOBAL.KEY_K,
+            KEY_J = GLOBAL.KEY_J,
+            KEY_N = GLOBAL.KEY_N,
+        }
+        local lock_key = LOCK_KEY_MAP[CONFIG.slot_lock_key] or GLOBAL.KEY_L
+
+        if lock_key ~= nil and not GLOBAL.rawget(GLOBAL, "BETTER_INVENTORY_SLOT_LOCK_HOTKEY_ADDED") then
+            GLOBAL.rawset(GLOBAL, "BETTER_INVENTORY_SLOT_LOCK_HOTKEY_ADDED", true)
+
+            GLOBAL.TheInput:AddKeyDownHandler(lock_key, function()
+                if GLOBAL.ThePlayer == nil or GLOBAL.ThePlayer.HUD == nil
+                    or (GLOBAL.ThePlayer.HUD.HasInputFocus ~= nil
+                        and GLOBAL.ThePlayer.HUD:HasInputFocus()) then
+                    return
+                end
+
+                local bar = ACTIVE_INVENTORY_BAR
+                if bar == nil or bar.owner ~= GLOBAL.ThePlayer or bar.inv == nil then
+                    return
+                end
+
+                for slot_index, slot in ipairs(bar.inv) do
+                    if slot ~= nil and slot.focus then
+                        local rpc = GLOBAL.GetModRPC(SLOT_LOCK_RPC_NAMESPACE, SLOT_LOCK_TOGGLE_RPC)
+                        GLOBAL.SendModRPCToServer(rpc, slot_index)
+                        return
+                    end
+                end
+            end)
+
+            DebugLog("Slot lock hotkey registered: " .. tostring(CONFIG.slot_lock_key))
+        end
+    end
+end
+
+--------------------------------------------------------------------------
 -- Separate bag slot / overflow-container compatibility
 --------------------------------------------------------------------------
 
@@ -600,6 +788,10 @@ end
 local inventory_bar_rebuild_patched = false
 
 AddClassPostConstruct("widgets/inventorybar", function(self)
+    if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+        ACTIVE_INVENTORY_BAR = self
+    end
+
     AddExtraEquipSlotsToInventoryBar(self)
 
     if not inventory_bar_rebuild_patched then
@@ -614,6 +806,10 @@ AddClassPostConstruct("widgets/inventorybar", function(self)
                 Rebuild_Base(self, ...)
                 AddExtraEquipSlotsToInventoryBar(self)
                 Reposition2x12InventoryBar(self)
+                if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+                    ACTIVE_INVENTORY_BAR = self
+                    RefreshSlotLockVisuals()
+                end
             end
         else
             DebugLog("InventoryBar class patch skipped: metatable/index not available yet")
@@ -621,6 +817,9 @@ AddClassPostConstruct("widgets/inventorybar", function(self)
     end
 
     Reposition2x12InventoryBar(self)
+    if CONFIG.slot_lock_enabled then
+        RefreshSlotLockVisuals()
+    end
 end)
 
 --------------------------------------------------------------------------
@@ -1078,6 +1277,7 @@ local function SortInventoryForPlayer(player)
     end
 
     local inventory = player.components.inventory
+    local slot_locks = player.components.betterinventory_slotlocks
     if inventory.isloading or inventory:GetActiveItem() ~= nil then
         DebugLog("Rejected sort while inventory is loading or holding an active item")
         return false
@@ -1093,7 +1293,9 @@ local function SortInventoryForPlayer(player)
     local ok, err = GLOBAL.pcall(function()
         for slot = 1, num_slots do
             local item = inventory:GetItemInSlot(slot)
-            if item ~= nil then
+            if slot_locks ~= nil and slot_locks:IsLocked(slot) then
+                occupied_slots[slot] = true
+            elseif item ~= nil then
                 local inventoryitem = item.components ~= nil and item.components.inventoryitem or nil
                 if inventoryitem ~= nil and inventoryitem.islockedinslot then
                     occupied_slots[slot] = true
@@ -1242,4 +1444,6 @@ DebugLog("Loaded multiplayer core. Protocol=" .. tostring(CORE_PROTOCOL_VERSION)
     .. ", armor=" .. tostring(CONFIG.slot_armor)
     .. ", accessory=" .. tostring(CONFIG.slot_accessory)
     .. ", sort=" .. tostring(CONFIG.sort_enabled)
-    .. ", sort_mode=" .. tostring(CONFIG.sort_mode))
+    .. ", sort_mode=" .. tostring(CONFIG.sort_mode)
+    .. ", slot_locks=" .. tostring(CONFIG.slot_lock_enabled)
+    .. ", lock_key=" .. tostring(CONFIG.slot_lock_key))

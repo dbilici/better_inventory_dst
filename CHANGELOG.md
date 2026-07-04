@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added server-authoritative manual slot locks. Hover a main inventory slot and
+  press the configurable lock key (default `L`) to reserve that slot during
+  sorting; locks are saved with the player and restored after reload.
+- Added a lock overlay and client/server lock-state synchronization.
 - Made category sorting deterministic for otherwise equal items. Identical
   finite-use, fueled, armor, and perishable items sort from highest to lowest
   condition; equal-condition items preserve their original relative slot order.

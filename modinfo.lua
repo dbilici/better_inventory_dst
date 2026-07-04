@@ -13,6 +13,8 @@ Current multiplayer core build:
 - Client bag-content reads account for the dedicated Bag slot
 - Vanilla-only item slot rules for safer testing
 - Inventory sort hotkey with optional stack merging
+- Hover a main inventory slot and press a configurable key to lock it in place
+- Manual slot locks persist across save/reload
 - Server-side sort cooldown, re-entrancy lock, and item recovery
 - Locked-slot items remain fixed during sorting
 - Late-join replication contract diagnostics
@@ -22,7 +24,7 @@ Current multiplayer core build:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.2.7-multiplayer-core"
+version = "0.3.0-slot-locks"
 api_version = 10
 priority = 100
 
@@ -139,6 +141,25 @@ configuration_options = {
             {description = "V", data = "KEY_V"},
         },
         default = "KEY_F5",
+    },
+    {
+        name = "slot_lock_enabled",
+        label = "Manual Slot Locks",
+        hover = "Hover a main inventory slot and press the lock hotkey to keep that slot fixed during sorting.",
+        options = boolean_options,
+        default = true,
+    },
+    {
+        name = "slot_lock_key",
+        label = "Slot Lock Hotkey",
+        hover = "Hover a main inventory slot and press this key to toggle its sort lock.",
+        options = {
+            {description = "L", data = "KEY_L"},
+            {description = "K", data = "KEY_K"},
+            {description = "J", data = "KEY_J"},
+            {description = "N", data = "KEY_N"},
+        },
+        default = "KEY_L",
     },
     {
         name = "debug_mode",

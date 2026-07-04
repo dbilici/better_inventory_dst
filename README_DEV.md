@@ -7,6 +7,15 @@ in a deliberate relative order, sort repeatedly, and verify that the full
 torches remain ahead of the partial torch while equal-condition items retain
 their relative order.
 
+Manual slot-lock checks:
+
+1. Hover an occupied slot and press `L`; verify the lock overlay appears and
+   repeated sorts leave the item in that slot.
+2. Lock an empty slot and verify sorting leaves it empty.
+3. Press `L` again to unlock, then verify sorting may reuse the slot.
+4. Save/reload and verify both occupied and empty slot locks are restored.
+5. Confirm typing `L` in chat does not toggle a hovered slot.
+
 Test matrix:
 
 1. Host a world, fill slots 16-24, and connect a second client after the items
