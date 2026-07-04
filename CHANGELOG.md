@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Made category sorting deterministic for otherwise equal items. Identical
+  finite-use, fueled, armor, and perishable items sort from highest to lowest
+  condition; equal-condition items preserve their original relative slot order.
+
 ## v0.2.7 - Multiplayer Core
 
 - Replaced generic `extrabody1/2/3` identifiers with namespaced Better Inventory
