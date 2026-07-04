@@ -1,0 +1,144 @@
+# Better Inventory — Steam Workshop Copy
+
+This file contains ready-to-paste copy and the release checklist for
+`v0.5.0-rc1`. It is not loaded by the mod.
+
+## Title
+
+Better Inventory
+
+## Short description
+
+Expanded inventory, dedicated equipment slots, deterministic sorting, manual
+slot locks, bag sorting, and Quick Stack — with server-authoritative item
+movement.
+
+## Workshop description
+
+[h1]Better Inventory[/h1]
+
+Better Inventory expands and organizes the Don't Starve Together inventory
+without moving item authority away from the server.
+
+[h2]Features[/h2]
+
+[list]
+[*]Optional 24-slot main inventory with a compact 2 x 12 layout
+[*]Separate optional Bag, Armor, and Accessory equipment slots
+[*]Deterministic category sorting with optional stack merging
+[*]Independent sorting for the equipped bag, even while its UI is closed
+[*]Persistent manual slot locks for items you want to keep in place
+[*]Quick Stack into compatible stacks already present in the equipped bag
+[*]Configurable hotkeys and inventory UI scale
+[*]Server-side cooldowns, transaction guards, and item recovery
+[/list]
+
+[h2]Default controls[/h2]
+
+[table]
+[tr][th]Input[/th][th]Action[/th][/tr]
+[tr][td]F5[/td][td]Sort the main inventory[/td][/tr]
+[tr][td]F6[/td][td]Sort the equipped bag[/td][/tr]
+[tr][td]F7[/td][td]Quick Stack matching items into existing bag stacks[/td][/tr]
+[tr][td]Hover a main slot + L[/td][td]Toggle that slot's sort lock[/td][/tr]
+[/table]
+
+All hotkeys can be changed in the mod configuration. Conflicting inventory
+hotkeys are detected and the secondary action is disabled instead of running
+two operations at once.
+
+[h2]Quick Stack behavior[/h2]
+
+Quick Stack only fills compatible stacks that already exist in the equipped
+bag. It does not introduce a new item type into the bag. Locked source slots
+are skipped, and leftovers return to their original main-inventory slot.
+
+[h2]Multiplayer[/h2]
+
+This is an all-clients mod: the server and every joining player must install and
+enable the same version. Inventory movement, sorting, locks, and Quick Stack are
+validated by the server.
+
+[h2]Release candidate notice[/h2]
+
+Version 0.5.0-rc1 has passed single-player, host, dedicated-server loading, and
+automated sorting regression tests. Full two-client late-join, reconnect, and
+Forest/Caves traversal validation is still in progress. Back up important
+worlds before testing a release candidate.
+
+[h2]Compatibility[/h2]
+
+Better Inventory targets Don't Starve Together API version 10. Existing
+v0.2.6+ saves remain compatible. Mods that replace the inventory HUD, change
+the base inventory size, or redefine equipment slots may conflict.
+
+[h2]Feedback and bug reports[/h2]
+
+Please include the host and client logs, enabled mod list, world type, and exact
+steps needed to reproduce the problem.
+
+Source and issue tracker:
+https://github.com/dbilici/better_inventory_dst
+
+## Change notes
+
+[h1]v0.5.0-rc1[/h1]
+
+[list]
+[*]Added Quick Stack to compatible stacks already present in the equipped bag.
+[*]Added independent equipped-bag sorting that works with the bag UI closed.
+[*]Added persistent manual main-inventory slot locks.
+[*]Made condition and equal-item sorting deterministic across repeated sorts.
+[*]Added server-side cooldown, re-entrancy, recovery, and protocol diagnostics.
+[*]Added automated regression coverage for sorting and Quick Stack behavior.
+[/list]
+
+This is a release candidate. Full two-client late-join, reconnect, and
+cross-shard validation is still pending.
+
+## Recommended Workshop visibility
+
+Publish `v0.5.0-rc1` as **Friends Only** or **Unlisted** while completing the
+two-client validation matrix. Switch to **Public** when issue #3 is complete and
+the final `v0.5.0` build is tagged.
+
+## Preview and screenshot plan
+
+Use a square preview image that remains legible at thumbnail size. Recommended
+screenshot order:
+
+1. Compact 24-slot inventory plus the three dedicated equipment slots.
+2. Before/after main-inventory category sort.
+3. A locked slot with its overlay visible.
+4. Equipped bag before/after bag sort.
+5. Quick Stack before/after, showing that no new item type enters the bag.
+
+Do not use debug chat or developer overlays in the Workshop screenshots.
+
+## Pre-publish checklist
+
+- [ ] Subscribe/upload account owns the Workshop item.
+- [ ] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
+- [ ] `modinfo.lua` reports `0.5.0-rc1` and API version 10.
+- [ ] Preview image and screenshots match the current 2 x 12 layout.
+- [ ] Workshop description and change notes are pasted from this file.
+- [x] Visibility is restricted for the release candidate (Friends Only).
+- [ ] Host and joining client both use exactly `0.5.0-rc1`.
+- [x] Single-player/host smoke test passes after the uploaded copy is subscribed.
+- [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
+- [ ] Issue #3 remains linked as the multiplayer release gate.
+
+## Final-release checklist
+
+- [ ] Complete the two-client late-join, reconnect, death/revive, and caves matrix.
+- [ ] Confirm no `[Better Inventory][WARN]` replication-contract messages.
+- [ ] Update version references from `0.5.0-rc1` to `0.5.0`.
+- [ ] Add final change notes and tag `v0.5.0`.
+- [ ] Change Workshop visibility to Public.
+
+## RC validation record
+
+- 2026-07-04: Uploaded `v0.5.0-rc1` to Steam Workshop with Friends Only
+  visibility. The subscribed Workshop copy loaded and passed the host smoke test
+  without observed errors.
+- Full two-client and cross-shard validation remains tracked by GitHub issue #3.
