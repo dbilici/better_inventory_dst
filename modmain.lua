@@ -1,5 +1,5 @@
 -- Better Inventory
--- v0.2.7 multiplayer core.
+-- v0.5.0-rc1.
 --
 -- Main goals:
 --   - 24-slot inventory foundation.
@@ -7,6 +7,8 @@
 --     extending below the screen.
 --   - Optional Bag / Armor / Accessory equip slots.
 --   - Inventory sort through server RPC.
+--   - Equipped-bag sort and Quick Stack through server RPC.
+--   - Persistent manual main-inventory slot locks.
 --   - No Quick Draw.
 
 local GLOBAL = GLOBAL

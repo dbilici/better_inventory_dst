@@ -1,6 +1,7 @@
-# v0.2.7 multiplayer core test focus
+# v0.5.0-rc1 validation
 
-This pass freezes feature work and focuses on server/client invariants.
+This release candidate freezes feature work and focuses on regression and
+server/client invariants.
 
 Pure sorting regression test:
 
@@ -66,7 +67,7 @@ Test matrix:
 8. Search logs for `[Better Inventory][WARN]`; any replication-contract warning is
    a release blocker.
 
-Expected debug success lines include `replication contract OK`, protocol `1`, and
+Expected debug success lines include `replication contract OK`, protocol `4`, and
 slot count `24` on both server and client. Each joining client should also log
 `Core protocol handshake OK`.
 

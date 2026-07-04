@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.0-rc1 - Release Candidate (2026-07-04)
 
 - Added server-authoritative Quick Stack to Bag on a separate configurable
   hotkey (default `F7`). It only fills compatible stacks already present in the
