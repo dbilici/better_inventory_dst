@@ -8,10 +8,57 @@ local function NewItem(prefab, options)
         prefab = prefab,
         components = options.components or {},
         _tags = options.tags or {},
+        _valid = true,
     }
 
     function item:HasTag(tag)
         return self._tags[tag] == true
+    end
+
+    function item:IsValid()
+        return self._valid
+    end
+
+    function item:Remove()
+        self._valid = false
+    end
+
+    return item
+end
+
+local function AttachStack(item, size, max_size)
+    local stack = {
+        size = size,
+        max_size = max_size,
+    }
+    item.components.stackable = stack
+
+    function stack:StackSize()
+        return self.size
+    end
+
+    function stack:IsFull()
+        return self.size >= self.max_size
+    end
+
+    function stack:CanStackWith(source)
+        return item.prefab == source.prefab and item.skinname == source.skinname
+    end
+
+    function stack:Put(source)
+        if not self:CanStackWith(source) then
+            return source
+        end
+
+        local source_stack = source.components.stackable
+        local moved = math.min(self.max_size - self.size, source_stack.size)
+        self.size = self.size + moved
+        source_stack.size = source_stack.size - moved
+        if source_stack.size <= 0 then
+            source:Remove()
+            return nil
+        end
+        return source
     end
 
     return item
@@ -36,11 +83,13 @@ end
 local function NewSortingApi(mode)
     return Sorting.Setup({
         GLOBAL = {
+            pcall = pcall,
             setmetatable = setmetatable,
         },
         config = {
             sort_mode = mode or "category",
             sort_merge_stacks = true,
+            quick_stack_enabled = true,
         },
         max_item_slots = 24,
         slot_defs = {
@@ -52,14 +101,89 @@ local function NewSortingApi(mode)
     })
 end
 
+local category_api = NewSortingApi("category")
+
+do
+    local bag_inst = {
+        IsValid = function()
+            return true
+        end,
+    }
+    local bag_target = AttachStack(NewItem("twigs"), 18, 20)
+    bag_target.components.inventoryitem = { owner = bag_inst }
+
+    local bag = {
+        inst = bag_inst,
+        readonlycontainer = false,
+        slots = { bag_target },
+    }
+    function bag:GetNumSlots()
+        return 8
+    end
+    function bag:GetItemInSlot(slot)
+        return self.slots[slot]
+    end
+
+    local player = { components = {} }
+    function player:IsValid()
+        return true
+    end
+
+    local source = AttachStack(NewItem("twigs"), 5, 20)
+    source.components.inventoryitem = { owner = player }
+    local unrelated = AttachStack(NewItem("cutgrass"), 7, 20)
+    unrelated.components.inventoryitem = { owner = player }
+
+    local inventory = {
+        isloading = false,
+        slots = { source, unrelated },
+    }
+    player.components.inventory = inventory
+
+    function inventory:GetActiveItem()
+        return nil
+    end
+    function inventory:GetOverflowContainer()
+        return bag
+    end
+    function inventory:GetNumSlots()
+        return 2
+    end
+    function inventory:GetItemInSlot(slot)
+        return self.slots[slot]
+    end
+    function inventory:RemoveItem(item)
+        for slot, candidate in pairs(self.slots) do
+            if candidate == item then
+                self.slots[slot] = nil
+                item.components.inventoryitem.owner = nil
+                return item
+            end
+        end
+    end
+    function inventory:GiveItem(item, slot)
+        if slot ~= nil and self.slots[slot] == nil then
+            self.slots[slot] = item
+            item.components.inventoryitem.owner = player
+            return true
+        end
+        return false
+    end
+
+    assert(category_api.QuickStackToBagForPlayer(player) == 2,
+        "quick stack should report moved units")
+    assert(bag_target.components.stackable:StackSize() == 20, "bag target should become full")
+    assert(source.components.stackable:StackSize() == 3, "source leftover should be preserved")
+    assert(inventory:GetItemInSlot(1) == source, "leftover should return to its original slot")
+    assert(inventory:GetItemInSlot(2) == unrelated, "unrelated item type must not move")
+end
+
 local function AssertOrder(items, expected, label)
     assert(#items == #expected, label .. ": item count changed")
     for index, item in ipairs(items) do
         assert(item == expected[index], label .. ": unexpected item at index " .. tostring(index))
     end
 end
-
-local category_api = NewSortingApi("category")
 
 do
     local rocks = NewItem("rocks")

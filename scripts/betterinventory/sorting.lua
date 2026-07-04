@@ -9,12 +9,15 @@ function Sorting.Setup(context)
     local SLOT_DEFS = assert(context.slot_defs, "slot definitions are required")
     local DebugLog = context.debug_log or function() end
     local DebugWarn = context.debug_warn or function() end
+    local AddClientModRPCHandler = context.add_client_mod_rpc_handler
     local AddModRPCHandler = context.add_mod_rpc_handler
     local TheNet = GLOBAL.TheNet
 
     local SORT_RPC_NAMESPACE = "BetterInventory"
     local SORT_RPC_NAME = "SortInventory"
     local BAG_SORT_RPC_NAME = "SortBag"
+    local QUICK_STACK_RPC_NAME = "QuickStackToBag"
+    local QUICK_STACK_RESULT_RPC_NAME = "QuickStackResult"
     local SORT_RPC_COOLDOWN = 0.75
     local SORT_REQUEST_STATE = GLOBAL.setmetatable({}, { __mode = "k" })
 
@@ -482,7 +485,105 @@ function Sorting.Setup(context)
         return true
     end
 
-    local function HandleSortRPC(player, sort_function, label)
+    local function QuickStackToBagForPlayer(player)
+        if not CONFIG.quick_stack_enabled then
+            return false
+        end
+
+        if player == nil or not player:IsValid() or player.components == nil
+            or player.components.inventory == nil then
+            return false
+        end
+
+        local inventory = player.components.inventory
+        local slot_locks = player.components.betterinventory_slotlocks
+        if inventory.isloading or inventory:GetActiveItem() ~= nil then
+            DebugLog("Rejected quick stack while inventory is loading or holding an active item")
+            return false
+        end
+
+        local container = inventory:GetOverflowContainer()
+        if container == nil or container.inst == nil or not container.inst:IsValid()
+            or container.readonlycontainer or container.GetNumSlots == nil
+            or container.GetItemInSlot == nil then
+            DebugLog("Rejected quick stack: no writable equipped bag")
+            return false
+        end
+
+        local bag_targets = {}
+        for slot = 1, container:GetNumSlots() do
+            local item = container:GetItemInSlot(slot)
+            local stackable = item ~= nil and item.components ~= nil and item.components.stackable or nil
+            if stackable ~= nil and stackable.IsFull ~= nil and not stackable:IsFull() then
+                table.insert(bag_targets, item)
+            end
+        end
+
+        if #bag_targets == 0 then
+            return false
+        end
+
+        local num_slots = inventory.GetNumSlots ~= nil and inventory:GetNumSlots() or MAX_ITEM_SLOTS
+        num_slots = math.min(num_slots or MAX_ITEM_SLOTS, MAX_ITEM_SLOTS)
+
+        local removed_records = {}
+        local moved_units = 0
+        local ok, err = GLOBAL.pcall(function()
+            for slot = 1, num_slots do
+                local source = inventory:GetItemInSlot(slot)
+                local inventoryitem = source ~= nil and source.components ~= nil
+                    and source.components.inventoryitem or nil
+                local manually_locked = slot_locks ~= nil and slot_locks:IsLocked(slot)
+                local built_in_locked = inventoryitem ~= nil and inventoryitem.islockedinslot
+
+                if source ~= nil and not manually_locked and not built_in_locked then
+                    local has_compatible_target = false
+                    for _, target in ipairs(bag_targets) do
+                        if target ~= nil and target:IsValid() and CanMergeStacks(target, source) then
+                            has_compatible_target = true
+                            break
+                        end
+                    end
+
+                    if has_compatible_target then
+                        local removed = inventory:RemoveItem(source, true)
+                        if removed ~= nil then
+                            table.insert(removed_records, { item = removed, slot = slot })
+
+                            for _, target in ipairs(bag_targets) do
+                                if removed:IsValid() and target ~= nil and target:IsValid()
+                                    and CanMergeStacks(target, removed) then
+                                    local source_stack = removed.components.stackable
+                                    local before = source_stack:StackSize()
+                                    TryMergeStackInto(target, removed)
+                                    local after = removed:IsValid() and removed.components ~= nil
+                                        and removed.components.stackable ~= nil
+                                        and removed.components.stackable:StackSize() or 0
+                                    moved_units = moved_units + math.max(0, before - after)
+                                end
+                            end
+                        else
+                            DebugWarn("Quick stack kept item in slot " .. tostring(slot)
+                                .. ": removal failed")
+                        end
+                    end
+                end
+            end
+        end)
+
+        RestoreDetachedSortItems(inventory, removed_records)
+
+        if not ok then
+            DebugWarn("Quick stack transaction recovered after error: " .. tostring(err))
+            return false
+        end
+
+        DebugLog("Quick stacked " .. tostring(moved_units) .. " item(s) into equipped bag for "
+            .. tostring(player.name or player.prefab or "player"))
+        return moved_units
+    end
+
+    local function HandleInventoryRPC(player, operation, label, success_callback)
         if player == nil or not player:IsValid() then
             return
         end
@@ -507,16 +608,34 @@ function Sorting.Setup(context)
 
         state.last_request = now
         state.busy = true
-        local ok, err = GLOBAL.pcall(sort_function, player)
+        local ok, result = GLOBAL.pcall(operation, player)
         state.busy = false
 
         if not ok then
-            DebugWarn("Unhandled " .. tostring(label) .. " RPC error: " .. tostring(err))
+            DebugWarn("Unhandled " .. tostring(label) .. " RPC error: " .. tostring(result))
+        elseif success_callback ~= nil then
+            local callback_ok, callback_err = GLOBAL.pcall(success_callback, player, result)
+            if not callback_ok then
+                DebugWarn("Unhandled " .. tostring(label) .. " result error: "
+                    .. tostring(callback_err))
+            end
         end
     end
 
+    local function SendQuickStackResult(player, moved_units)
+        moved_units = GLOBAL.tonumber(moved_units) or 0
+        if moved_units <= 0 or player == nil or player.userid == nil then
+            return
+        end
+
+        local rpc = GLOBAL.GetClientModRPC(SORT_RPC_NAMESPACE, QUICK_STACK_RESULT_RPC_NAME)
+        GLOBAL.SendModRPCToClient(rpc, player.userid, moved_units)
+    end
+
     local api = {
+        CanMergeStacks = CanMergeStacks,
         GetInventorySortCategory = GetInventorySortCategory,
+        QuickStackToBagForPlayer = QuickStackToBagForPlayer,
         SortItemsForInventory = SortItemsForInventory,
     }
 
@@ -524,16 +643,34 @@ function Sorting.Setup(context)
         return api
     end
 
-    if CONFIG.sort_enabled or CONFIG.bag_sort_enabled then
+    if CONFIG.sort_enabled or CONFIG.bag_sort_enabled or CONFIG.quick_stack_enabled then
+        if CONFIG.quick_stack_enabled and AddClientModRPCHandler ~= nil then
+            AddClientModRPCHandler(SORT_RPC_NAMESPACE, QUICK_STACK_RESULT_RPC_NAME,
+                function(moved_units)
+                    moved_units = GLOBAL.tonumber(moved_units) or 0
+                    local sound = GLOBAL.TheFrontEnd ~= nil and GLOBAL.TheFrontEnd:GetSound() or nil
+                    if moved_units > 0 and sound ~= nil then
+                        sound:PlaySound("dontstarve/HUD/click_move")
+                    end
+                end)
+        end
+
         if CONFIG.sort_enabled then
             AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_RPC_NAME, function(player)
-                HandleSortRPC(player, SortInventoryForPlayer, "inventory sort")
+                HandleInventoryRPC(player, SortInventoryForPlayer, "inventory sort")
             end)
         end
 
         if CONFIG.bag_sort_enabled then
             AddModRPCHandler(SORT_RPC_NAMESPACE, BAG_SORT_RPC_NAME, function(player)
-                HandleSortRPC(player, SortBagForPlayer, "bag sort")
+                HandleInventoryRPC(player, SortBagForPlayer, "bag sort")
+            end)
+        end
+
+        if CONFIG.quick_stack_enabled then
+            AddModRPCHandler(SORT_RPC_NAMESPACE, QUICK_STACK_RPC_NAME, function(player)
+                HandleInventoryRPC(player, QuickStackToBagForPlayer, "quick stack",
+                    SendQuickStackResult)
             end)
         end
 
@@ -544,6 +681,7 @@ function Sorting.Setup(context)
                 KEY_F7 = GLOBAL.KEY_F7,
                 KEY_F8 = GLOBAL.KEY_F8,
                 KEY_F9 = GLOBAL.KEY_F9,
+                KEY_F10 = GLOBAL.KEY_F10,
                 KEY_B = GLOBAL.KEY_B,
                 KEY_G = GLOBAL.KEY_G,
                 KEY_R = GLOBAL.KEY_R,
@@ -553,6 +691,7 @@ function Sorting.Setup(context)
 
             local sort_key = KEY_MAP[CONFIG.sort_key] or GLOBAL.KEY_F5
             local bag_sort_key = KEY_MAP[CONFIG.bag_sort_key] or GLOBAL.KEY_F6
+            local quick_stack_key = KEY_MAP[CONFIG.quick_stack_key] or GLOBAL.KEY_F7
 
             local function CanUseSortHotkey()
                 if GLOBAL.ThePlayer == nil or GLOBAL.ThePlayer.HUD == nil then
@@ -606,6 +745,22 @@ function Sorting.Setup(context)
                     DebugLog("Bag sort hotkey registered: " .. tostring(CONFIG.bag_sort_key))
                 end
             end
+
+            if CONFIG.quick_stack_enabled and quick_stack_key ~= nil then
+                local conflicts_with_sort = CONFIG.sort_enabled and quick_stack_key == sort_key
+                local conflicts_with_bag_sort = CONFIG.bag_sort_enabled and quick_stack_key == bag_sort_key
+                if conflicts_with_sort or conflicts_with_bag_sort then
+                    DebugWarn("Quick stack hotkey matches a sort hotkey; quick stack hotkey disabled")
+                elseif not GLOBAL.rawget(GLOBAL, "BETTER_INVENTORY_QUICK_STACK_HOTKEY_ADDED") then
+                    GLOBAL.rawset(GLOBAL, "BETTER_INVENTORY_QUICK_STACK_HOTKEY_ADDED", true)
+
+                    GLOBAL.TheInput:AddKeyDownHandler(quick_stack_key, function()
+                        SendSortRPC(QUICK_STACK_RPC_NAME)
+                    end)
+
+                    DebugLog("Quick stack hotkey registered: " .. tostring(CONFIG.quick_stack_key))
+                end
+            end
         end
     end
 
@@ -614,4 +769,3 @@ function Sorting.Setup(context)
 end
 
 return Sorting
-

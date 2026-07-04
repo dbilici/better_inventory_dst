@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added server-authoritative Quick Stack to Bag on a separate configurable
+  hotkey (default `F7`). It only fills compatible stacks already present in the
+  equipped bag and never starts a new item type there.
+- Quick Stack skips manually and natively locked main-inventory slots, rejects
+  active cursor items, works with a closed bag UI, and restores stack leftovers
+  to their original slots.
+- Successful Quick Stack operations play one local inventory-move sound; safe
+  no-op requests remain silent.
 - Refactored the inventory and bag sorting engine, RPC guards, and hotkey
   registration into a dedicated module without changing player-facing behavior.
 - Added pure-Lua regression coverage for category, stack-size, condition,

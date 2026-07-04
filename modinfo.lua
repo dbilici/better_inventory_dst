@@ -14,6 +14,7 @@ Current multiplayer core build:
 - Vanilla-only item slot rules for safer testing
 - Inventory sort hotkey with optional stack merging
 - Separate hotkey to sort the equipped bag without moving items between containers
+- Quick Stack hotkey fills compatible stacks already present in the equipped bag
 - Hover a main inventory slot and press a configurable key to lock it in place
 - Manual slot locks persist across save/reload
 - Server-side sort cooldown, re-entrancy lock, and item recovery
@@ -25,7 +26,7 @@ Current multiplayer core build:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.4.0-bag-sort"
+version = "0.5.0-quick-stack"
 api_version = 10
 priority = 100
 
@@ -163,6 +164,27 @@ configuration_options = {
             {description = "G", data = "KEY_G"},
         },
         default = "KEY_F6",
+    },
+    {
+        name = "quick_stack_enabled",
+        label = "Quick Stack to Bag",
+        hover = "Move main-inventory items only into compatible stacks already present in the equipped bag.",
+        options = boolean_options,
+        default = true,
+    },
+    {
+        name = "quick_stack_key",
+        label = "Quick Stack Hotkey",
+        hover = "Press this key to fill matching stacks already present in the equipped bag.",
+        options = {
+            {description = "F7", data = "KEY_F7"},
+            {description = "F8", data = "KEY_F8"},
+            {description = "F9", data = "KEY_F9"},
+            {description = "F10", data = "KEY_F10"},
+            {description = "B", data = "KEY_B"},
+            {description = "G", data = "KEY_G"},
+        },
+        default = "KEY_F7",
     },
     {
         name = "slot_lock_enabled",

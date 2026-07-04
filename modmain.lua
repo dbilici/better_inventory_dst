@@ -45,6 +45,8 @@ local CONFIG = {
     sort_merge_stacks = GetModConfigData("sort_merge_stacks") ~= false,
     sort_key = GetModConfigData("sort_key") or "KEY_F5",
     bag_sort_key = GetModConfigData("bag_sort_key") or "KEY_F6",
+    quick_stack_enabled = GetModConfigData("quick_stack_enabled") ~= false,
+    quick_stack_key = GetModConfigData("quick_stack_key") or "KEY_F7",
     slot_lock_enabled = GetModConfigData("slot_lock_enabled") ~= false,
     slot_lock_key = GetModConfigData("slot_lock_key") or "KEY_L",
     debug_mode = GetModConfigData("debug_mode") or "off",
@@ -54,7 +56,7 @@ local MAX_ITEM_SLOTS = CONFIG.inventory_size == 24 and 24 or 15
 local USE_EXPANDED_INVENTORY = MAX_ITEM_SLOTS > 15
 local USE_2X12_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12"
 local UI_SCALE = CONFIG.ui_scale or 0.85
-local CORE_PROTOCOL_VERSION = 3
+local CORE_PROTOCOL_VERSION = 4
 local CORE_RPC_NAMESPACE = "BetterInventoryCore"
 
 --------------------------------------------------------------------------
@@ -1017,6 +1019,7 @@ Sorting.Setup({
     slot_defs = SLOT_DEFS,
     debug_log = DebugLog,
     debug_warn = DebugWarn,
+    add_client_mod_rpc_handler = AddClientModRPCHandler,
     add_mod_rpc_handler = AddModRPCHandler,
 })
 DebugLog("Loaded multiplayer core. Protocol=" .. tostring(CORE_PROTOCOL_VERSION)
@@ -1030,5 +1033,7 @@ DebugLog("Loaded multiplayer core. Protocol=" .. tostring(CORE_PROTOCOL_VERSION)
     .. ", bag_sort=" .. tostring(CONFIG.bag_sort_enabled)
     .. ", sort_mode=" .. tostring(CONFIG.sort_mode)
     .. ", bag_sort_key=" .. tostring(CONFIG.bag_sort_key)
+    .. ", quick_stack=" .. tostring(CONFIG.quick_stack_enabled)
+    .. ", quick_stack_key=" .. tostring(CONFIG.quick_stack_key)
     .. ", slot_locks=" .. tostring(CONFIG.slot_lock_enabled)
     .. ", lock_key=" .. tostring(CONFIG.slot_lock_key))

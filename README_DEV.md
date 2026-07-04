@@ -35,6 +35,21 @@ Equipped bag-sort checks:
 6. Set both sort hotkeys to the same key and verify the bag hotkey is disabled
    with a warning instead of dispatching both operations.
 
+Quick Stack to Bag checks:
+
+1. Put a partial stack in the equipped bag and a matching stack in the main
+   inventory; press `F7` and verify only the matching quantity moves and one
+   inventory-move sound plays.
+2. Fill the bag target nearly to capacity and verify leftovers return to the
+   source inventory slot.
+3. Verify an item type not already present in the bag does not move.
+4. Lock a matching source slot with `L`; verify Quick Stack leaves it untouched.
+5. Hold an active cursor item, remove the bag, and close the bag UI in separate
+   runs; the first two cases must be safe no-ops and the closed bag must work.
+6. Set `F7` as another sort hotkey and verify Quick Stack is disabled with a
+   warning instead of dispatching two operations.
+7. Press `F7` when nothing can move and verify no success sound plays.
+
 Test matrix:
 
 1. Host a world, fill slots 16-24, and connect a second client after the items
