@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-- Made category sorting stable for otherwise equal items. Identical items such
-  as torches now preserve their original relative slot order regardless of
-  durability, so repeated sorts no longer reshuffle them unpredictably.
+- Made category sorting deterministic for otherwise equal items. Identical
+  finite-use, fueled, armor, and perishable items sort from highest to lowest
+  condition; equal-condition items preserve their original relative slot order.
 
 ## v0.2.7 - Multiplayer Core
 

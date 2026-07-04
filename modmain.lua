@@ -985,6 +985,27 @@ local function MergePartialStacks(items)
     return merged
 end
 
+local ITEM_CONDITION_COMPONENTS = { "finiteuses", "fueled", "armor", "perishable" }
+
+local function GetItemConditionPercent(item)
+    local components = item ~= nil and item.components or nil
+    if components == nil then
+        return nil
+    end
+
+    -- These components all expose GetPercent() as a normalized 0..1 value.
+    -- Use the first applicable condition so identical items sort from most to
+    -- least usable without coupling the comparator to individual prefabs.
+    for _, component_name in ipairs(ITEM_CONDITION_COMPONENTS) do
+        local component = components[component_name]
+        if component ~= nil and component.GetPercent ~= nil then
+            return component:GetPercent()
+        end
+    end
+
+    return nil
+end
+
 local function SortItemsForInventory(items)
     if CONFIG.sort_mode == "compact" then
         return items
@@ -1015,6 +1036,12 @@ local function SortItemsForInventory(items)
         local sb = b.components ~= nil and b.components.stackable ~= nil and b.components.stackable.StackSize ~= nil and b.components.stackable:StackSize() or 1
         if sa ~= sb then
             return sa > sb
+        end
+
+        local condition_a = GetItemConditionPercent(a)
+        local condition_b = GetItemConditionPercent(b)
+        if condition_a ~= nil and condition_b ~= nil and condition_a ~= condition_b then
+            return condition_a > condition_b
         end
 
         return original_order[a] < original_order[b]
