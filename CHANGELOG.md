@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refactored the inventory and bag sorting engine, RPC guards, and hotkey
+  registration into a dedicated module without changing player-facing behavior.
+- Added pure-Lua regression coverage for category, stack-size, condition,
+  stable-tie, repeated-sort, and compact-mode ordering.
 - Added server-authoritative sorting for the equipped bag on a separate,
   configurable hotkey (default `F6`). Bag sorting never intentionally moves
   items between the bag and main inventory.

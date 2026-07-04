@@ -2,6 +2,12 @@
 
 This pass freezes feature work and focuses on server/client invariants.
 
+Pure sorting regression test:
+
+```sh
+lua tests/sorting_spec.lua
+```
+
 Known-fix regression check: place two full torches and one partially used torch
 in a deliberate relative order, sort repeatedly, and verify that the full
 torches remain ahead of the partial torch while equal-condition items retain
