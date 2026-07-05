@@ -1,6 +1,11 @@
 # Changelog
 
-## v0.5.0-rc1 - Release Candidate (2026-07-04)
+## v0.5.0 - Stable (2026-07-05)
+
+- Promoted the release candidate after successful three-player late-join,
+  reconnect, death/revive, bag operation, and Forest/Caves validation.
+- Verified the subscribed Steam Workshop build without observed errors or
+  Better Inventory replication warnings.
 
 - Added server-authoritative Quick Stack to Bag on a separate configurable
   hotkey (default `F7`). It only fills compatible stacks already present in the

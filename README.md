@@ -5,10 +5,9 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.5.0-rc1` is a release candidate. Single-player/host validation and
-dedicated-server loading pass. Full two-client late-join and cross-shard
-validation is still tracked in
-[issue #3](https://github.com/dbilici/better_inventory_dst/issues/3).
+`v0.5.0` is the first stable release of the multiplayer-safe sorting core. It
+has passed single-player, host, dedicated-server, three-player late-join,
+reconnect, death/revive, and Forest/Caves validation.
 
 ## Features
 
@@ -48,7 +47,7 @@ no-op requests remain silent.
 3. Install and enable the same build for every joining client.
 
 The mod targets Don't Starve Together API version 10. Existing v0.2.6+ saves
-remain compatible. Back up important worlds before adopting a release candidate.
+remain compatible. Back up important worlds before changing a mod setup.
 
 ## Configuration
 
