@@ -1,7 +1,7 @@
 # Better Inventory — Steam Workshop Copy
 
-This file contains ready-to-paste copy and the release checklist for
-`v0.5.0-rc1`. It is not loaded by the mod.
+This file contains ready-to-paste copy and the release checklist for `v0.5.0`.
+It is not loaded by the mod.
 
 ## Title
 
@@ -59,12 +59,12 @@ This is an all-clients mod: the server and every joining player must install and
 enable the same version. Inventory movement, sorting, locks, and Quick Stack are
 validated by the server.
 
-[h2]Release candidate notice[/h2]
+[h2]Validation[/h2]
 
-Version 0.5.0-rc1 has passed single-player, host, dedicated-server loading, and
-automated sorting regression tests. Full two-client late-join, reconnect, and
-Forest/Caves traversal validation is still in progress. Back up important
-worlds before testing a release candidate.
+Version 0.5.0 has passed automated sorting regression tests plus single-player,
+host, dedicated-server, and three-player validation. Multiplayer coverage
+includes late join, reconnect, death/revive, bag operations, and Forest/Caves
+travel.
 
 [h2]Compatibility[/h2]
 
@@ -82,7 +82,7 @@ https://github.com/dbilici/better_inventory_dst
 
 ## Change notes
 
-[h1]v0.5.0-rc1[/h1]
+[h1]v0.5.0[/h1]
 
 [list]
 [*]Added Quick Stack to compatible stacks already present in the equipped bag.
@@ -93,14 +93,13 @@ https://github.com/dbilici/better_inventory_dst
 [*]Added automated regression coverage for sorting and Quick Stack behavior.
 [/list]
 
-This is a release candidate. Full two-client late-join, reconnect, and
-cross-shard validation is still pending.
+Validated with three players, including late join, reconnect, death/revive,
+bag operations, and Forest/Caves travel.
 
 ## Recommended Workshop visibility
 
-Publish `v0.5.0-rc1` as **Friends Only** or **Unlisted** while completing the
-two-client validation matrix. Switch to **Public** when issue #3 is complete and
-the final `v0.5.0` build is tagged.
+Publish `v0.5.0` as **Public** after the final tag and GitHub release are
+created.
 
 ## Preview and screenshot plan
 
@@ -117,22 +116,22 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 
 ## Pre-publish checklist
 
-- [ ] Subscribe/upload account owns the Workshop item.
-- [ ] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
-- [ ] `modinfo.lua` reports `0.5.0-rc1` and API version 10.
-- [ ] Preview image and screenshots match the current 2 x 12 layout.
-- [ ] Workshop description and change notes are pasted from this file.
-- [x] Visibility is restricted for the release candidate (Friends Only).
-- [ ] Host and joining client both use exactly `0.5.0-rc1`.
+- [x] Subscribe/upload account owns the Workshop item.
+- [x] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
+- [x] `modinfo.lua` reports `0.5.0` and API version 10.
+- [x] Preview image and screenshots match the current 2 x 12 layout.
+- [x] Workshop description and change notes are pasted from this file.
+- [x] Visibility is restricted until the final release is tagged.
+- [x] Host and joining clients use the same build.
 - [x] Single-player/host smoke test passes after the uploaded copy is subscribed.
-- [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
-- [ ] Issue #3 remains linked as the multiplayer release gate.
+- [x] Dedicated server loads the subscribed Workshop copy without Lua errors.
+- [x] Issue #3 multiplayer release gate is complete.
 
 ## Final-release checklist
 
-- [ ] Complete the two-client late-join, reconnect, death/revive, and caves matrix.
-- [ ] Confirm no `[Better Inventory][WARN]` replication-contract messages.
-- [ ] Update version references from `0.5.0-rc1` to `0.5.0`.
+- [x] Complete the multiplayer late-join, reconnect, death/revive, and caves matrix.
+- [x] Confirm no `[Better Inventory][WARN]` replication-contract messages.
+- [x] Update version references from `0.5.0-rc1` to `0.5.0`.
 - [ ] Add final change notes and tag `v0.5.0`.
 - [ ] Change Workshop visibility to Public.
 
@@ -141,4 +140,6 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 - 2026-07-04: Uploaded `v0.5.0-rc1` to Steam Workshop with Friends Only
   visibility. The subscribed Workshop copy loaded and passed the host smoke test
   without observed errors.
-- Full two-client and cross-shard validation remains tracked by GitHub issue #3.
+- 2026-07-05: Three players completed late-join, reconnect, death/revive, bag
+  operations, and Forest/Caves tests without observed problems or replication
+  warnings. GitHub issue #3 is complete.

@@ -1,6 +1,6 @@
-# v0.5.0-rc1 validation
+# v0.5.0 validation
 
-This release candidate freezes feature work and focuses on regression and
+This stable release freezes feature work and validates regression and
 server/client invariants.
 
 Pure sorting regression test:
