@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Added an in-game sort-order panel on a configurable hotkey (default `F8`).
+- Added Default, Combat, Building, Survivor, and best-effort Anti Drop presets.
+- Presets are independent editable tabs: switching preserves drafts, Reset Tab
+  affects only the active tab, and Apply All persists every tab.
+- Category order is player-specific, server-validated, and persistent across
+  save/reload and reconnect.
+- The active preset applies to main-inventory and equipped-bag sort.
+- Duplicate host-default priorities fall back to the stable category order.
+- Corrected core resource and light classification where broad edible, fuel,
+  burnable, or weapon components previously put items in misleading categories.
+- Craftable items now use DST's native Regular crafting-filter membership as
+  the primary category source, with deterministic precedence for overlapping
+  filters and fallback rules for non-craftable loot/resources.
+- Bumped the multiplayer core protocol to 5 for sort-preference RPCs.
+
 ## v0.5.0 - Stable (2026-07-05)
 
 - Promoted the release candidate after successful three-player late-join,

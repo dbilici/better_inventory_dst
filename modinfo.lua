@@ -2,7 +2,7 @@ name = "Better Inventory"
 description = [[
 Expanded inventory + utility equipment slots + inventory sort for Don't Starve Together.
 
-Current v0.5.0 stable release:
+Current v0.6.0 development build:
 - Optional 24-slot inventory foundation
 - Unified server/client/classified slot count for usable slots 16-24
 - Namespaced equipment slots to avoid collisions with other mods
@@ -13,6 +13,9 @@ Current v0.5.0 stable release:
 - Client bag-content reads account for the dedicated Bag slot
 - Vanilla-only item slot rules for safer testing
 - Inventory sort hotkey with optional stack merging
+- In-game sort-order panel with per-player persistent category order
+- Default / Combat / Building / Survivor / Anti Drop sort presets
+- Independent editable preset tabs with per-tab reset and Apply All
 - Separate hotkey to sort the equipped bag without moving items between containers
 - Quick Stack hotkey fills compatible stacks already present in the equipped bag
 - Hover a main inventory slot and press a configurable key to lock it in place
@@ -26,7 +29,7 @@ Current v0.5.0 stable release:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.5.0"
+version = "0.6.0-dev"
 api_version = 10
 priority = 100
 
@@ -50,6 +53,22 @@ icon = "modicon.tex"
 local boolean_options = {
     {description = "Disabled", data = false},
     {description = "Enabled", data = true},
+}
+
+local sort_priority_options = {
+    {description = "1 - First", data = 1},
+    {description = "2", data = 2},
+    {description = "3", data = 3},
+    {description = "4", data = 4},
+    {description = "5", data = 5},
+    {description = "6", data = 6},
+    {description = "7", data = 7},
+    {description = "8", data = 8},
+    {description = "9", data = 9},
+    {description = "10", data = 10},
+    {description = "11", data = 11},
+    {description = "12", data = 12},
+    {description = "13 - Last", data = 13},
 }
 
 configuration_options = {
@@ -145,6 +164,20 @@ configuration_options = {
         default = "KEY_F5",
     },
     {
+        name = "sort_order_key",
+        label = "Sort Order Panel Hotkey",
+        hover = "Open the in-game category order panel. Use a different key from other inventory actions.",
+        options = {
+            {description = "F8", data = "KEY_F8"},
+            {description = "F9", data = "KEY_F9"},
+            {description = "F10", data = "KEY_F10"},
+            {description = "B", data = "KEY_B"},
+            {description = "G", data = "KEY_G"},
+            {description = "V", data = "KEY_V"},
+        },
+        default = "KEY_F8",
+    },
+    {
         name = "bag_sort_enabled",
         label = "Equipped Bag Sort",
         hover = "Sort the equipped backpack or bag internally without moving items to or from the main inventory.",
@@ -215,5 +248,96 @@ configuration_options = {
             {description = "Chat + Log", data = "chatlog"},
         },
         default = "off",
+    },
+    {
+        name = "sort_priority_tool",
+        label = "Sort Priority: Tools/Fishing/Seafaring",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 1,
+    },
+    {
+        name = "sort_priority_weapon",
+        label = "Sort Priority: Weapons",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 2,
+    },
+    {
+        name = "sort_priority_armor",
+        label = "Sort Priority: Armor",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 3,
+    },
+    {
+        name = "sort_priority_bag",
+        label = "Sort Priority: Storage",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 4,
+    },
+    {
+        name = "sort_priority_accessory",
+        label = "Sort Priority: Riding/Accessories",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 5,
+    },
+    {
+        name = "sort_priority_clothing",
+        label = "Sort Priority: Clothing/Weather",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 6,
+    },
+    {
+        name = "sort_priority_food",
+        label = "Sort Priority: Food/Cooking",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 7,
+    },
+    {
+        name = "sort_priority_healing",
+        label = "Sort Priority: Healing",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 8,
+    },
+    {
+        name = "sort_priority_light",
+        label = "Sort Priority: Light",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 9,
+    },
+    {
+        name = "sort_priority_fuel",
+        label = "Sort Priority: Fuel",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 10,
+    },
+    {
+        name = "sort_priority_magic",
+        label = "Sort Priority: Magic",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 11,
+    },
+    {
+        name = "sort_priority_trinket",
+        label = "Sort Priority: Decor/Event",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 12,
+    },
+    {
+        name = "sort_priority_material",
+        label = "Sort Priority: Refined/Materials",
+        hover = "Lower numbers sort earlier. Duplicate priorities use the default category order.",
+        options = sort_priority_options,
+        default = 13,
     },
 }

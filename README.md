@@ -5,15 +5,17 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.5.0` is the first stable release of the multiplayer-safe sorting core. It
-has passed single-player, host, dedicated-server, three-player late-join,
-reconnect, death/revive, and Forest/Caves validation.
+`v0.6.0-dev` adds configurable category priorities on top of the validated
+`v0.5.0` multiplayer-safe sorting core. Pre-1.0 Workshop builds remain Friends
+Only while features and compatibility are still evolving.
 
 ## Features
 
 - Optional 24-slot main inventory with a compact 2 x 12 HUD layout.
 - Separate optional Bag, Armor, and Accessory equipment slots.
 - Deterministic category sorting with stack merging and condition ordering.
+- Craftable-item classification based on DST's native crafting filters.
+- In-game sort-order panel with persistent per-player category order.
 - Separate sorting for the equipped bag, including while its UI is closed.
 - Persistent manual main-inventory slot locks.
 - Quick Stack into compatible stacks already present in the equipped bag.
@@ -27,6 +29,7 @@ reconnect, death/revive, and Forest/Caves validation.
 | `F5` | Sort the main inventory |
 | `F6` | Sort the equipped bag |
 | `F7` | Quick Stack matching items into existing bag stacks |
+| `F8` | Open the in-game category order panel |
 | Hover a main slot + `L` | Toggle that slot's sort lock |
 
 All hotkeys are configurable. If two inventory actions use the same key, the
@@ -51,8 +54,22 @@ remain compatible. Back up important worlds before changing a mod setup.
 
 ## Configuration
 
-The Mods menu exposes inventory size/layout, HUD scale, equipment slots, sorting
-mode, stack merging, manual slot locks, Quick Stack, hotkeys, and debug logging.
+Press `F8` in game to choose Default, Combat, Building, Survivor, or Anti Drop;
+categories can still be moved up or down before applying. The order is saved
+per player and applies to both main-inventory and equipped-bag sorting. Each
+preset tab keeps its own editable order; switching tabs preserves unapplied
+drafts, `Reset Tab` affects only the open tab, and `Apply All` saves every tab
+plus the active preset. Anti
+Drop is best effort: it places expendable materials first so frog theft is more
+likely to remove one of them, but the game controls the final slot scan. The Mods
+menu priority values set the host defaults.
+
+Craftable items use DST's native Regular crafting-filter membership as the
+primary classification source. Because an item may appear in multiple filters,
+the first supported filter in the game's documented order becomes its primary
+inventory category. Non-craftable resources and loot use component, tag, and
+prefab fallbacks. Filter reference:
+[Crafting/DST](https://dontstarve.wiki.gg/wiki/Crafting/DST).
 
 ## Development
 

@@ -1,4 +1,5 @@
 local Sorting = {}
+local Categories = require("betterinventory/categories")
 
 function Sorting.Setup(context)
     assert(context ~= nil, "Better Inventory sorting context is required")
@@ -18,86 +19,196 @@ function Sorting.Setup(context)
     local BAG_SORT_RPC_NAME = "SortBag"
     local QUICK_STACK_RPC_NAME = "QuickStackToBag"
     local QUICK_STACK_RESULT_RPC_NAME = "QuickStackResult"
+    local SORT_ORDER_REQUEST_RPC_NAME = "RequestSortOrder"
+    local SORT_ORDER_APPLY_RPC_NAME = "ApplySortOrder"
+    local SORT_ORDER_STATE_RPC_NAME = "SortOrderState"
     local SORT_RPC_COOLDOWN = 0.75
     local SORT_REQUEST_STATE = GLOBAL.setmetatable({}, { __mode = "k" })
+    local SORT_ORDER_REQUEST_STATE = GLOBAL.setmetatable({}, { __mode = "k" })
+    local ACTIVE_SORT_ORDER_SCREEN = nil
 
-    local CATEGORY_SORT_ORDER = {
-        tool = 10,
-        weapon = 20,
-        armor = 30,
-        bag = 35,
-        accessory = 40,
-        clothing = 45,
-        food = 50,
-        healing = 55,
-        light = 60,
-        fuel = 65,
-        material = 70,
-        magic = 80,
-        trinket = 90,
-        misc = 100,
+    local DEFAULT_CATEGORY_SORT_ORDER = Categories.DEFAULT_PRIORITIES
+    local CONFIGURED_CATEGORY_SORT_ORDER = CONFIG.sort_category_priorities or {}
+
+    local MATERIAL_PREFABS = {
+        boards = true,
+        charcoal = true,
+        cutgrass = true,
+        cutstone = true,
+        gears = true,
+        goldnugget = true,
+        guano = true,
+        houndstooth = true,
+        livinglog = true,
+        log = true,
+        marble = true,
+        moonglass = true,
+        moonrocknugget = true,
+        nitre = true,
+        papyrus = true,
+        pigskin = true,
+        poop = true,
+        rocks = true,
+        rope = true,
+        silk = true,
+        stinger = true,
+        thulecite = true,
+        thulecite_pieces = true,
+        transistor = true,
+        twigs = true,
     }
+
+    local LIGHT_PREFABS = {
+        lantern = true,
+        minerhat = true,
+        molehat = true,
+        nightstick = true,
+        pumpkin_lantern = true,
+        torch = true,
+    }
+
+    -- DST crafting filters are the primary classification source for craftable
+    -- inventory items. The ordering follows the Regular filters documented by
+    -- the official-community wiki and recipes_filter.lua. Filters may overlap;
+    -- the first mapped filter becomes the item's primary inventory category.
+    local CRAFTING_FILTER_CATEGORY_MAP = {
+        { filter = "TOOLS", category = "tool" },
+        { filter = "LIGHT", category = "light" },
+        { filter = "PROTOTYPERS", category = "material" },
+        { filter = "REFINE", category = "material" },
+        { filter = "WEAPONS", category = "weapon" },
+        { filter = "ARMOUR", category = "armor" },
+        { filter = "CLOTHING", category = "clothing" },
+        { filter = "RESTORATION", category = "healing" },
+        { filter = "MAGIC", category = "magic" },
+        { filter = "DECOR", category = "trinket" },
+        { filter = "STRUCTURES", category = "material" },
+        { filter = "CONTAINERS", category = "bag" },
+        { filter = "COOKING", category = "food" },
+        { filter = "GARDENING", category = "food" },
+        { filter = "FISHING", category = "tool" },
+        { filter = "SEAFARING", category = "tool" },
+        { filter = "RIDING", category = "accessory" },
+        { filter = "WINTER", category = "clothing" },
+        { filter = "SUMMER", category = "clothing" },
+        { filter = "RAIN", category = "clothing" },
+        { filter = "SPECIAL_EVENT", category = "trinket" },
+    }
+    local CRAFTING_CATEGORY_BY_PREFAB = nil
+
+    local function BuildCraftingCategoryCache()
+        local cache = {}
+        local filters = GLOBAL.CRAFTING_FILTERS or {}
+        local recipes = GLOBAL.AllRecipes or {}
+
+        for _, mapping in ipairs(CRAFTING_FILTER_CATEGORY_MAP) do
+            local filter = filters[mapping.filter]
+            local values = filter ~= nil and filter.default_sort_values or nil
+            if type(values) == "table" then
+                for recipe_name in pairs(values) do
+                    local recipe = recipes[recipe_name]
+                    local product = recipe ~= nil and recipe.product or recipe_name
+                    if product ~= nil and cache[product] == nil then
+                        cache[product] = mapping.category
+                    end
+                end
+            end
+        end
+
+        return cache
+    end
+
+    local function GetCraftingFilterCategory(prefab)
+        if CRAFTING_CATEGORY_BY_PREFAB == nil then
+            CRAFTING_CATEGORY_BY_PREFAB = BuildCraftingCategoryCache()
+        end
+        return prefab ~= nil and CRAFTING_CATEGORY_BY_PREFAB[prefab] or nil
+    end
 
     local function SafeHasTag(item, tag)
         return item ~= nil and item.HasTag ~= nil and item:HasTag(tag)
     end
 
-    local function GetInventorySortCategory(item)
+    local function GetInventorySortCategoryName(item)
         if item == nil then
-            return CATEGORY_SORT_ORDER.misc
+            return "misc"
         end
 
         local components = item.components or {}
+        local crafting_category = GetCraftingFilterCategory(item.prefab)
+
+        if crafting_category ~= nil then
+            return crafting_category
+        end
+
+        if MATERIAL_PREFABS[item.prefab] then
+            return "material"
+        end
 
         if components.tool ~= nil or SafeHasTag(item, "tool") then
-            return CATEGORY_SORT_ORDER.tool
+            return "tool"
+        end
+
+        if LIGHT_PREFABS[item.prefab] or components.lighter ~= nil
+            or SafeHasTag(item, "lighter") or SafeHasTag(item, "light") then
+            return "light"
         end
 
         if components.weapon ~= nil or SafeHasTag(item, "weapon") then
-            return CATEGORY_SORT_ORDER.weapon
+            return "weapon"
         end
 
         if SafeHasTag(item, SLOT_DEFS.ARMOR.tag) or components.armor ~= nil or SafeHasTag(item, "armor") then
-            return CATEGORY_SORT_ORDER.armor
+            return "armor"
         end
 
         if SafeHasTag(item, SLOT_DEFS.BAG.tag) or SafeHasTag(item, "backpack") then
-            return CATEGORY_SORT_ORDER.bag
+            return "bag"
         end
 
         if SafeHasTag(item, SLOT_DEFS.ACCESSORY.tag) or SafeHasTag(item, "amulet") then
-            return CATEGORY_SORT_ORDER.accessory
+            return "accessory"
         end
 
         if components.equippable ~= nil then
-            return CATEGORY_SORT_ORDER.clothing
+            return "clothing"
         end
 
         if components.edible ~= nil or SafeHasTag(item, "preparedfood") or SafeHasTag(item, "cookable") then
-            return CATEGORY_SORT_ORDER.food
+            return "food"
         end
 
         if components.healer ~= nil then
-            return CATEGORY_SORT_ORDER.healing
-        end
-
-        if components.fueled ~= nil or components.burnable ~= nil or SafeHasTag(item, "light") then
-            return CATEGORY_SORT_ORDER.light
+            return "healing"
         end
 
         if components.fuel ~= nil or SafeHasTag(item, "fuel") then
-            return CATEGORY_SORT_ORDER.fuel
+            return "fuel"
         end
 
         if SafeHasTag(item, "gem") or SafeHasTag(item, "magic") then
-            return CATEGORY_SORT_ORDER.magic
+            return "magic"
         end
 
         if SafeHasTag(item, "trinket") then
-            return CATEGORY_SORT_ORDER.trinket
+            return "trinket"
         end
 
-        return CATEGORY_SORT_ORDER.material
+        return "material"
+    end
+
+    local function GetInventorySortCategory(item, category_priorities)
+        local category = GetInventorySortCategoryName(item)
+        if category == "misc" then
+            return #Categories.ORDER + 1
+        end
+        local priorities = category_priorities or CONFIGURED_CATEGORY_SORT_ORDER
+        local configured_priority = GLOBAL.tonumber(priorities[category])
+        if configured_priority == nil or configured_priority < 1 or configured_priority > 13
+            or configured_priority % 1 ~= 0 then
+            return DEFAULT_CATEGORY_SORT_ORDER[category]
+        end
+        return configured_priority
     end
 
     local function GetItemSortName(item)
@@ -214,7 +325,7 @@ function Sorting.Setup(context)
         return nil
     end
 
-    local function SortItemsForInventory(items)
+    local function SortItemsForInventory(items, category_priorities)
         if CONFIG.sort_mode == "compact" then
             return items
         end
@@ -228,10 +339,20 @@ function Sorting.Setup(context)
         end
 
         table.sort(items, function(a, b)
-            local ca = GetInventorySortCategory(a)
-            local cb = GetInventorySortCategory(b)
+            local category_a = GetInventorySortCategoryName(a)
+            local category_b = GetInventorySortCategoryName(b)
+            local ca = GetInventorySortCategory(a, category_priorities)
+            local cb = GetInventorySortCategory(b, category_priorities)
             if ca ~= cb then
                 return ca < cb
+            end
+
+            -- Duplicate custom priorities are valid. Resolve them with the old
+            -- default category order so configuration mistakes remain stable.
+            local default_ca = DEFAULT_CATEGORY_SORT_ORDER[category_a]
+            local default_cb = DEFAULT_CATEGORY_SORT_ORDER[category_b]
+            if default_ca ~= default_cb then
+                return default_ca < default_cb
             end
 
             local pa = GetItemSortName(a)
@@ -261,6 +382,13 @@ function Sorting.Setup(context)
     local function IsItemAttachedToInventory(item)
         local inventoryitem = item ~= nil and item.components ~= nil and item.components.inventoryitem or nil
         return inventoryitem ~= nil and inventoryitem.owner ~= nil
+    end
+
+    local function GetPlayerCategoryPriorities(player)
+        local preferences = player ~= nil and player.components ~= nil
+            and player.components.betterinventory_sortprefs or nil
+        return preferences ~= nil and preferences:GetPriorities()
+            or CONFIGURED_CATEGORY_SORT_ORDER
     end
 
     local function RestoreDetachedSortItems(inventory, records)
@@ -351,7 +479,7 @@ function Sorting.Setup(context)
             end
 
             items = MergePartialStacks(items)
-            items = SortItemsForInventory(items)
+            items = SortItemsForInventory(items, GetPlayerCategoryPriorities(player))
 
             local slot = 1
             for _, item in ipairs(items) do
@@ -446,7 +574,7 @@ function Sorting.Setup(context)
             end
 
             items = MergePartialStacks(items)
-            items = SortItemsForInventory(items)
+            items = SortItemsForInventory(items, GetPlayerCategoryPriorities(player))
 
             for _, item in ipairs(items) do
                 if item ~= nil and item:IsValid() then
@@ -632,9 +760,52 @@ function Sorting.Setup(context)
         GLOBAL.SendModRPCToClient(rpc, player.userid, moved_units)
     end
 
+    local function SendSortOrderState(player)
+        if player == nil or player.userid == nil then
+            return
+        end
+
+        local preferences = player.components ~= nil
+            and player.components.betterinventory_sortprefs or nil
+        local active_preset = preferences ~= nil and preferences.active_preset or "default"
+        local current_orders = {}
+        local base_orders = {}
+        for _, key in ipairs(Categories.PRESET_KEYS) do
+            current_orders[key] = preferences ~= nil and preferences:GetPresetOrder(key)
+                or Categories.GetBasePresetOrder(key, CONFIGURED_CATEGORY_SORT_ORDER)
+            base_orders[key] = Categories.GetBasePresetOrder(key,
+                preferences ~= nil and preferences.default_priorities
+                    or CONFIGURED_CATEGORY_SORT_ORDER)
+        end
+        local current = Categories.SerializePresetState(active_preset, current_orders)
+        local defaults = Categories.SerializePresetState(active_preset, base_orders)
+        if current == nil or defaults == nil then
+            return
+        end
+
+        local rpc = GLOBAL.GetClientModRPC(SORT_RPC_NAMESPACE, SORT_ORDER_STATE_RPC_NAME)
+        GLOBAL.SendModRPCToClient(rpc, player.userid, current, defaults)
+    end
+
+    local function CanUpdateSortOrder(player)
+        if player == nil or not player:IsValid() or player.components == nil
+            or player.components.betterinventory_sortprefs == nil then
+            return false
+        end
+
+        local now = GLOBAL.GetTime()
+        local last_request = SORT_ORDER_REQUEST_STATE[player] or -0.25
+        if now - last_request < 0.25 then
+            return false
+        end
+        SORT_ORDER_REQUEST_STATE[player] = now
+        return true
+    end
+
     local api = {
         CanMergeStacks = CanMergeStacks,
         GetInventorySortCategory = GetInventorySortCategory,
+        GetInventorySortCategoryName = GetInventorySortCategoryName,
         QuickStackToBagForPlayer = QuickStackToBagForPlayer,
         SortItemsForInventory = SortItemsForInventory,
     }
@@ -644,6 +815,57 @@ function Sorting.Setup(context)
     end
 
     if CONFIG.sort_enabled or CONFIG.bag_sort_enabled or CONFIG.quick_stack_enabled then
+        if AddClientModRPCHandler ~= nil then
+            AddClientModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_STATE_RPC_NAME,
+                function(current_serialized, default_serialized)
+                    if GLOBAL.TheFrontEnd == nil then
+                        return
+                    end
+
+                    if ACTIVE_SORT_ORDER_SCREEN ~= nil then
+                        GLOBAL.TheFrontEnd:PopScreen(ACTIVE_SORT_ORDER_SCREEN)
+                    end
+
+                    local SortOrderScreen = require("widgets/betterinventory_sortorderscreen")
+                    local screen
+                    screen = SortOrderScreen(current_serialized, default_serialized,
+                        function(serialized)
+                            local rpc = GLOBAL.GetModRPC(SORT_RPC_NAMESPACE, SORT_ORDER_APPLY_RPC_NAME)
+                            GLOBAL.SendModRPCToServer(rpc, serialized)
+                        end,
+                        function()
+                            if ACTIVE_SORT_ORDER_SCREEN == screen then
+                                ACTIVE_SORT_ORDER_SCREEN = nil
+                            end
+                        end)
+                    ACTIVE_SORT_ORDER_SCREEN = screen
+                    GLOBAL.TheFrontEnd:PushScreen(screen)
+                end)
+        end
+
+        AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_REQUEST_RPC_NAME, function(player)
+            if CanUpdateSortOrder(player) then
+                SendSortOrderState(player)
+            end
+        end)
+
+        AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_APPLY_RPC_NAME,
+            function(player, serialized)
+                if not CanUpdateSortOrder(player) then
+                    return
+                end
+
+                local preferences = player.components.betterinventory_sortprefs
+                local active_preset, orders = Categories.DeserializePresetState(serialized)
+                if active_preset == nil or not preferences:SetState(active_preset, orders) then
+                    DebugWarn("Rejected invalid sort-order request for "
+                        .. tostring(player.userid or player.GUID))
+                    return
+                end
+
+                DebugLog("Updated sort order for " .. tostring(player.userid or player.GUID))
+            end)
+
         if CONFIG.quick_stack_enabled and AddClientModRPCHandler ~= nil then
             AddClientModRPCHandler(SORT_RPC_NAMESPACE, QUICK_STACK_RESULT_RPC_NAME,
                 function(moved_units)
@@ -692,6 +914,7 @@ function Sorting.Setup(context)
             local sort_key = KEY_MAP[CONFIG.sort_key] or GLOBAL.KEY_F5
             local bag_sort_key = KEY_MAP[CONFIG.bag_sort_key] or GLOBAL.KEY_F6
             local quick_stack_key = KEY_MAP[CONFIG.quick_stack_key] or GLOBAL.KEY_F7
+            local sort_order_key = KEY_MAP[CONFIG.sort_order_key] or GLOBAL.KEY_F8
 
             local function CanUseSortHotkey()
                 if GLOBAL.ThePlayer == nil or GLOBAL.ThePlayer.HUD == nil then
@@ -759,6 +982,29 @@ function Sorting.Setup(context)
                     end)
 
                     DebugLog("Quick stack hotkey registered: " .. tostring(CONFIG.quick_stack_key))
+                end
+            end
+
+            if sort_order_key ~= nil then
+                local conflicts_with_sort = CONFIG.sort_enabled and sort_order_key == sort_key
+                local conflicts_with_bag_sort = CONFIG.bag_sort_enabled and sort_order_key == bag_sort_key
+                local conflicts_with_quick_stack = CONFIG.quick_stack_enabled
+                    and sort_order_key == quick_stack_key
+                if conflicts_with_sort or conflicts_with_bag_sort or conflicts_with_quick_stack then
+                    DebugWarn("Sort order panel hotkey conflicts with an inventory hotkey; panel hotkey disabled")
+                elseif not GLOBAL.rawget(GLOBAL, "BETTER_INVENTORY_SORT_ORDER_HOTKEY_ADDED") then
+                    GLOBAL.rawset(GLOBAL, "BETTER_INVENTORY_SORT_ORDER_HOTKEY_ADDED", true)
+
+                    GLOBAL.TheInput:AddKeyDownHandler(sort_order_key, function()
+                        if ACTIVE_SORT_ORDER_SCREEN ~= nil then
+                            GLOBAL.TheFrontEnd:PopScreen(ACTIVE_SORT_ORDER_SCREEN)
+                            return
+                        end
+                        SendSortRPC(SORT_ORDER_REQUEST_RPC_NAME)
+                    end)
+
+                    DebugLog("Sort order panel hotkey registered: "
+                        .. tostring(CONFIG.sort_order_key))
                 end
             end
         end

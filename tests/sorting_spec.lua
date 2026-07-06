@@ -1,6 +1,78 @@
 package.path = "scripts/?.lua;" .. package.path
 
 local Sorting = require("betterinventory/sorting")
+local Categories = require("betterinventory/categories")
+
+do
+    local custom_order = {
+        "material", "light", "weapon", "tool", "armor", "bag", "accessory",
+        "clothing", "food", "healing", "fuel", "magic", "trinket",
+    }
+    local encoded = Categories.SerializeOrder(custom_order)
+    assert(encoded ~= nil, "valid category order should serialize")
+    local decoded = Categories.DeserializeOrder(encoded)
+    assert(decoded ~= nil and decoded[1] == "material" and decoded[13] == "trinket",
+        "category order should round-trip")
+    assert(Categories.DeserializeOrder("tool,tool") == nil,
+        "duplicate or incomplete category order must be rejected")
+    for _, preset_key in ipairs(Categories.PRESET_ORDER) do
+        local preset = Categories.PRESETS[preset_key]
+        assert(preset ~= nil and Categories.SerializeOrder(preset.order) ~= nil,
+            "preset should contain every category exactly once: " .. tostring(preset_key))
+    end
+
+    local preset_orders = {}
+    for _, key in ipairs(Categories.PRESET_KEYS) do
+        preset_orders[key] = Categories.GetBasePresetOrder(key, Categories.DEFAULT_PRIORITIES)
+    end
+    preset_orders.combat = Categories.CopyOrder(custom_order)
+    local state = Categories.SerializePresetState("combat", preset_orders)
+    local active, decoded_orders = Categories.DeserializePresetState(state)
+    assert(active == "combat" and decoded_orders.combat[1] == "material",
+        "preset state should preserve active tab and independent orders")
+end
+
+do
+    local PreviousClass = Class
+    Class = function(constructor)
+        local class = {}
+        class.__index = class
+        return setmetatable(class, {
+            __call = function(_, ...)
+                local instance = setmetatable({}, class)
+                constructor(instance, ...)
+                return instance
+            end,
+        })
+    end
+
+    package.loaded["components/betterinventory_sortprefs"] = nil
+    local SortPreferences = require("components/betterinventory_sortprefs")
+    local custom_order = {
+        "material", "light", "weapon", "tool", "armor", "bag", "accessory",
+        "clothing", "food", "healing", "fuel", "magic", "trinket",
+    }
+    local preferences = SortPreferences({})
+    local preset_orders = preferences:GetPresetOrders()
+    preset_orders.combat = Categories.CopyOrder(custom_order)
+    assert(preferences:SetState("combat", preset_orders),
+        "valid independent preset state should be accepted")
+    local saved = preferences:OnSave()
+    assert(saved ~= nil and saved.preset_orders.combat ~= nil, "custom preset order should save")
+
+    local restored = SortPreferences({})
+    restored:OnLoad(saved)
+    assert(restored.active_preset == "combat" and restored:GetOrder()[1] == "material",
+        "saved active preset and custom order should restore")
+    local default_before = restored:GetPresetOrder("default")[1]
+    restored:Reset("combat")
+    assert(restored:GetPresetOrder("combat")[1] == "weapon",
+        "reset should restore only the selected preset")
+    assert(restored:GetPresetOrder("default")[1] == default_before,
+        "resetting one preset must not change another")
+
+    Class = PreviousClass
+end
 
 local function NewItem(prefab, options)
     options = options or {}
@@ -80,16 +152,20 @@ local function NewStackComponent(size)
     }
 end
 
-local function NewSortingApi(mode)
+local function NewSortingApi(mode, category_priorities, crafting_filters, recipes)
     return Sorting.Setup({
         GLOBAL = {
             pcall = pcall,
             setmetatable = setmetatable,
+            tonumber = tonumber,
+            CRAFTING_FILTERS = crafting_filters,
+            AllRecipes = recipes,
         },
         config = {
             sort_mode = mode or "category",
             sort_merge_stacks = true,
             quick_stack_enabled = true,
+            sort_category_priorities = category_priorities,
         },
         max_item_slots = 24,
         slot_defs = {
@@ -101,7 +177,96 @@ local function NewSortingApi(mode)
     })
 end
 
+local function AssertOrder(items, expected, label)
+    assert(#items == #expected, label .. ": item count changed")
+    for index, item in ipairs(items) do
+        assert(item == expected[index], label .. ": unexpected item at index " .. tostring(index))
+    end
+end
+
+do
+    local custom_api = NewSortingApi("category", {
+        material = 1,
+        light = 11,
+        weapon = 12,
+        tool = 13,
+    })
+    local rocks = NewItem("rocks")
+    local torch = NewItem("torch", {
+        components = { fueled = NewConditionComponent(1) },
+    })
+    local spear = NewItem("spear", {
+        components = { weapon = {} },
+    })
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local items = { axe, spear, torch, rocks }
+
+    custom_api.SortItemsForInventory(items)
+    AssertOrder(items, { rocks, torch, spear, axe }, "custom category order")
+end
+
+do
+    local duplicate_api = NewSortingApi("category", {
+        tool = 1,
+        weapon = 1,
+    })
+    local spear = NewItem("spear", {
+        components = { weapon = {} },
+    })
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local items = { spear, axe }
+
+    duplicate_api.SortItemsForInventory(items)
+    AssertOrder(items, { axe, spear }, "duplicate priority fallback")
+end
+
+do
+    local invalid_api = NewSortingApi("category", {
+        tool = 99,
+        weapon = "invalid",
+    })
+    local spear = NewItem("spear", {
+        components = { weapon = {} },
+    })
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local items = { spear, axe }
+
+    invalid_api.SortItemsForInventory(items)
+    AssertOrder(items, { axe, spear }, "invalid priority fallback")
+end
+
 local category_api = NewSortingApi("category")
+
+do
+    local filter_api = NewSortingApi("category", nil, {
+        LIGHT = { default_sort_values = { wiki_lantern_recipe = 1 } },
+        WEAPONS = { default_sort_values = { wiki_lantern_recipe = 1 } },
+    }, {
+        wiki_lantern_recipe = { product = "wiki_lantern" },
+    })
+    local item = NewItem("wiki_lantern")
+    assert(filter_api.GetInventorySortCategoryName(item) == "light",
+        "overlapping crafting filters should use documented filter precedence")
+end
+
+do
+    local log = NewItem("log", {
+        components = { edible = {}, fuel = {} },
+    })
+    local torch = NewItem("torch", {
+        components = { fueled = {}, lighter = {}, weapon = {} },
+    })
+    assert(category_api.GetInventorySortCategoryName(log) == "material",
+        "core resources must not be classified as food or fuel")
+    assert(category_api.GetInventorySortCategoryName(torch) == "light",
+        "light-emitting weapons must be classified as light")
+end
 
 do
     local bag_inst = {
@@ -176,13 +341,6 @@ do
     assert(source.components.stackable:StackSize() == 3, "source leftover should be preserved")
     assert(inventory:GetItemInSlot(1) == source, "leftover should return to its original slot")
     assert(inventory:GetItemInSlot(2) == unrelated, "unrelated item type must not move")
-end
-
-local function AssertOrder(items, expected, label)
-    assert(#items == #expected, label .. ": item count changed")
-    for index, item in ipairs(items) do
-        assert(item == expected[index], label .. ": unexpected item at index " .. tostring(index))
-    end
 end
 
 do

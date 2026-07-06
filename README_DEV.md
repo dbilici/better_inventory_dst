@@ -9,6 +9,33 @@ Pure sorting regression test:
 lua tests/sorting_spec.lua
 ```
 
+In-game sort-order panel checks:
+
+1. Press `F8`, move Materials above Tools, apply, and verify rocks sort before
+   tools in both the main inventory and equipped bag.
+2. Reopen the panel and verify the applied order is shown. Save/reload and
+   reconnect, then verify it is still present.
+3. Change the order independently on a second player and verify each player
+   keeps their own order while sorting on the same server.
+4. On the Default tab, press Reset Tab then Apply All and verify the host's
+   configured default order returns without changing the other preset tabs.
+5. Set the panel hotkey equal to F5/F6/F7 and verify it is disabled with a
+   warning instead of dispatching two actions.
+6. Apply Combat, Building, and Survivor in turn; verify each preset changes the
+   visible category order and both F5/F6 follow it.
+7. Apply Anti Drop with grass/twigs plus valuable combat gear. Verify expendable
+   materials occupy the earliest sorted slots. Frog theft remains best effort
+   because vanilla scans `inventory.itemslots` with `pairs`.
+8. Verify logs/grass are Refined & Materials and torches/lanterns are Light rather than
+   being misclassified by their edible, fuel, burnable, or weapon components.
+9. Test craftable multi-filter items (for example tools that are also weapons)
+   and verify the first supported DST Regular crafting filter determines their
+   primary inventory category. Non-craftable loot must still use fallback rules.
+10. Edit Combat, switch to Building without applying, then return to Combat and
+    verify its draft remains. Reset Building and verify Combat is unchanged.
+11. Press Apply All, reopen the panel, and verify every edited tab plus the
+    selected active preset persists across save/reload and reconnect.
+
 Known-fix regression check: place two full torches and one partially used torch
 in a deliberate relative order, sort repeatedly, and verify that the full
 torches remain ahead of the partial torch while equal-condition items retain
@@ -67,7 +94,7 @@ Test matrix:
 8. Search logs for `[Better Inventory][WARN]`; any replication-contract warning is
    a release blocker.
 
-Expected debug success lines include `replication contract OK`, protocol `4`, and
+Expected debug success lines include `replication contract OK`, protocol `5`, and
 slot count `24` on both server and client. Each joining client should also log
 `Core protocol handshake OK`.
 

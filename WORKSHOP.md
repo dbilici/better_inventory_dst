@@ -26,6 +26,9 @@ without moving item authority away from the server.
 [*]Optional 24-slot main inventory with a compact 2 x 12 layout
 [*]Separate optional Bag, Armor, and Accessory equipment slots
 [*]Deterministic category sorting with optional stack merging
+[*]Craftable-item categories derived from DST's native crafting filters
+[*]In-game category order panel with persistent per-player preferences
+[*]Default, Combat, Building, Survivor, and best-effort Anti Drop presets
 [*]Independent sorting for the equipped bag, even while its UI is closed
 [*]Persistent manual slot locks for items you want to keep in place
 [*]Quick Stack into compatible stacks already present in the equipped bag
@@ -40,6 +43,7 @@ without moving item authority away from the server.
 [tr][td]F5[/td][td]Sort the main inventory[/td][/tr]
 [tr][td]F6[/td][td]Sort the equipped bag[/td][/tr]
 [tr][td]F7[/td][td]Quick Stack matching items into existing bag stacks[/td][/tr]
+[tr][td]F8[/td][td]Open the category order panel[/td][/tr]
 [tr][td]Hover a main slot + L[/td][td]Toggle that slot's sort lock[/td][/tr]
 [/table]
 
@@ -96,10 +100,10 @@ https://github.com/dbilici/better_inventory_dst
 Validated with three players, including late join, reconnect, death/revive,
 bag operations, and Forest/Caves travel.
 
-## Recommended Workshop visibility
+## Workshop visibility policy
 
-Publish `v0.5.0` as **Public** after the final tag and GitHub release are
-created.
+Keep all pre-1.0 builds **Friends Only** while features and compatibility are
+still evolving. Switch to **Public** with the stable `v1.0.0` release.
 
 ## Preview and screenshot plan
 
@@ -133,7 +137,8 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 - [x] Confirm no `[Better Inventory][WARN]` replication-contract messages.
 - [x] Update version references from `0.5.0-rc1` to `0.5.0`.
 - [ ] Add final change notes and tag `v0.5.0`.
-- [ ] Change Workshop visibility to Public.
+- [x] Keep pre-1.0 Workshop visibility restricted to Friends Only.
+- [ ] Change Workshop visibility to Public with `v1.0.0`.
 
 ## RC validation record
 

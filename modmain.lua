@@ -1,5 +1,5 @@
 -- Better Inventory
--- v0.5.0-rc1.
+-- Post-v0.5.0 development.
 --
 -- Main goals:
 --   - 24-slot inventory foundation.
@@ -46,19 +46,35 @@ local CONFIG = {
     sort_mode = GetModConfigData("sort_mode") or "category",
     sort_merge_stacks = GetModConfigData("sort_merge_stacks") ~= false,
     sort_key = GetModConfigData("sort_key") or "KEY_F5",
+    sort_order_key = GetModConfigData("sort_order_key") or "KEY_F8",
     bag_sort_key = GetModConfigData("bag_sort_key") or "KEY_F6",
     quick_stack_enabled = GetModConfigData("quick_stack_enabled") ~= false,
     quick_stack_key = GetModConfigData("quick_stack_key") or "KEY_F7",
     slot_lock_enabled = GetModConfigData("slot_lock_enabled") ~= false,
     slot_lock_key = GetModConfigData("slot_lock_key") or "KEY_L",
     debug_mode = GetModConfigData("debug_mode") or "off",
+    sort_category_priorities = {
+        tool = GetModConfigData("sort_priority_tool") or 1,
+        weapon = GetModConfigData("sort_priority_weapon") or 2,
+        armor = GetModConfigData("sort_priority_armor") or 3,
+        bag = GetModConfigData("sort_priority_bag") or 4,
+        accessory = GetModConfigData("sort_priority_accessory") or 5,
+        clothing = GetModConfigData("sort_priority_clothing") or 6,
+        food = GetModConfigData("sort_priority_food") or 7,
+        healing = GetModConfigData("sort_priority_healing") or 8,
+        light = GetModConfigData("sort_priority_light") or 9,
+        fuel = GetModConfigData("sort_priority_fuel") or 10,
+        magic = GetModConfigData("sort_priority_magic") or 11,
+        trinket = GetModConfigData("sort_priority_trinket") or 12,
+        material = GetModConfigData("sort_priority_material") or 13,
+    },
 }
 
 local MAX_ITEM_SLOTS = CONFIG.inventory_size == 24 and 24 or 15
 local USE_EXPANDED_INVENTORY = MAX_ITEM_SLOTS > 15
 local USE_2X12_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12"
 local UI_SCALE = CONFIG.ui_scale or 0.85
-local CORE_PROTOCOL_VERSION = 4
+local CORE_PROTOCOL_VERSION = 5
 local CORE_RPC_NAMESPACE = "BetterInventoryCore"
 
 --------------------------------------------------------------------------
@@ -1013,6 +1029,20 @@ end
 -- Inventory sorting
 --------------------------------------------------------------------------
 
+local SortCategories = require("betterinventory/categories")
+
+if CONFIG.sort_enabled or CONFIG.bag_sort_enabled then
+    AddPlayerPostInit(function(inst)
+        if GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld.ismastersim and inst.components ~= nil then
+            if inst.components.betterinventory_sortprefs == nil then
+                inst:AddComponent("betterinventory_sortprefs")
+            end
+            inst.components.betterinventory_sortprefs:SetDefaultPriorities(
+                CONFIG.sort_category_priorities or SortCategories.DEFAULT_PRIORITIES)
+        end
+    end)
+end
+
 local Sorting = require("betterinventory/sorting")
 Sorting.Setup({
     GLOBAL = GLOBAL,
@@ -1034,6 +1064,7 @@ DebugLog("Loaded multiplayer core. Protocol=" .. tostring(CORE_PROTOCOL_VERSION)
     .. ", sort=" .. tostring(CONFIG.sort_enabled)
     .. ", bag_sort=" .. tostring(CONFIG.bag_sort_enabled)
     .. ", sort_mode=" .. tostring(CONFIG.sort_mode)
+    .. ", sort_order_key=" .. tostring(CONFIG.sort_order_key)
     .. ", bag_sort_key=" .. tostring(CONFIG.bag_sort_key)
     .. ", quick_stack=" .. tostring(CONFIG.quick_stack_enabled)
     .. ", quick_stack_key=" .. tostring(CONFIG.quick_stack_key)
