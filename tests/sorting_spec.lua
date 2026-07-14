@@ -177,6 +177,42 @@ local function NewSortingApi(mode, category_priorities, crafting_filters, recipe
     })
 end
 
+local function NewInstalledSortingApi(config)
+    local handlers = {}
+    local api = Sorting.Setup({
+        GLOBAL = {
+            GetTime = function()
+                return 0
+            end,
+            TheNet = {
+                IsDedicated = function()
+                    return true
+                end,
+            },
+            pcall = pcall,
+            setmetatable = setmetatable,
+            tonumber = tonumber,
+            CRAFTING_FILTERS = {},
+            AllRecipes = {},
+        },
+        config = config,
+        max_item_slots = 24,
+        slot_defs = {
+            ARMOR = { tag = "betterinventory_armor" },
+            BAG = { tag = "betterinventory_bag" },
+            ACCESSORY = { tag = "betterinventory_accessory" },
+        },
+        add_mod_rpc_handler = function(namespace, name, handler)
+            handlers[namespace .. ":" .. name] = handler
+        end,
+        add_client_mod_rpc_handler = function(namespace, name, handler)
+            handlers["client:" .. namespace .. ":" .. name] = handler
+        end,
+    })
+    api.handlers = handlers
+    return api
+end
+
 local function AssertOrder(items, expected, label)
     assert(#items == #expected, label .. ": item count changed")
     for index, item in ipairs(items) do
@@ -242,6 +278,38 @@ do
 end
 
 local category_api = NewSortingApi("category")
+
+do
+    local quick_stack_only = NewInstalledSortingApi({
+        sort_enabled = false,
+        bag_sort_enabled = false,
+        quick_stack_enabled = true,
+        sort_mode = "category",
+        sort_merge_stacks = true,
+        sort_category_priorities = Categories.DEFAULT_PRIORITIES,
+    })
+
+    assert(quick_stack_only.handlers["BetterInventory:QuickStackToBag"] ~= nil,
+        "quick stack RPC should register when quick stack is enabled")
+    assert(quick_stack_only.handlers["BetterInventory:RequestSortOrder"] == nil,
+        "sort-order request RPC should not register without inventory or bag sort")
+    assert(quick_stack_only.handlers["BetterInventory:ApplySortOrder"] == nil,
+        "sort-order apply RPC should not register without inventory or bag sort")
+
+    local sort_enabled = NewInstalledSortingApi({
+        sort_enabled = true,
+        bag_sort_enabled = false,
+        quick_stack_enabled = false,
+        sort_mode = "category",
+        sort_merge_stacks = true,
+        sort_category_priorities = Categories.DEFAULT_PRIORITIES,
+    })
+
+    assert(sort_enabled.handlers["BetterInventory:RequestSortOrder"] ~= nil,
+        "sort-order request RPC should register when inventory sort is enabled")
+    assert(sort_enabled.handlers["BetterInventory:ApplySortOrder"] ~= nil,
+        "sort-order apply RPC should register when inventory sort is enabled")
+end
 
 do
     local filter_api = NewSortingApi("category", nil, {

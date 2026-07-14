@@ -24,6 +24,9 @@
   example sorting and then quick stacking within the cooldown window no longer
   silently drops the second request. Re-entrancy is still guarded across all
   operations.
+- Sort-order RPCs and the panel hotkey are now registered only when main or bag
+  sorting is enabled, so Quick Stack-only configurations do not expose a dead
+  panel path.
 - The sort-order panel's open request and Apply All are rate limited
   independently, so a fast Apply can no longer be silently dropped by the
   preceding panel-open request.

@@ -828,57 +828,64 @@ function Sorting.Setup(context)
         return api
     end
 
-    if CONFIG.sort_enabled or CONFIG.bag_sort_enabled or CONFIG.quick_stack_enabled then
+    local sort_order_enabled = CONFIG.sort_enabled or CONFIG.bag_sort_enabled
+
+    if sort_order_enabled or CONFIG.quick_stack_enabled then
         if AddClientModRPCHandler ~= nil then
-            AddClientModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_STATE_RPC_NAME,
-                function(current_serialized, default_serialized)
-                    if GLOBAL.TheFrontEnd == nil then
+            if sort_order_enabled then
+                AddClientModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_STATE_RPC_NAME,
+                    function(current_serialized, default_serialized)
+                        if GLOBAL.TheFrontEnd == nil then
+                            return
+                        end
+
+                        if ACTIVE_SORT_ORDER_SCREEN ~= nil then
+                            GLOBAL.TheFrontEnd:PopScreen(ACTIVE_SORT_ORDER_SCREEN)
+                        end
+
+                        local SortOrderScreen = require("widgets/betterinventory_sortorderscreen")
+                        local screen
+                        screen = SortOrderScreen(current_serialized, default_serialized,
+                            function(serialized)
+                                local rpc = GLOBAL.GetModRPC(SORT_RPC_NAMESPACE,
+                                    SORT_ORDER_APPLY_RPC_NAME)
+                                GLOBAL.SendModRPCToServer(rpc, serialized)
+                            end,
+                            function()
+                                if ACTIVE_SORT_ORDER_SCREEN == screen then
+                                    ACTIVE_SORT_ORDER_SCREEN = nil
+                                end
+                            end)
+                        ACTIVE_SORT_ORDER_SCREEN = screen
+                        GLOBAL.TheFrontEnd:PushScreen(screen)
+                    end)
+            end
+        end
+
+        if sort_order_enabled then
+            AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_REQUEST_RPC_NAME, function(player)
+                if CanUpdateSortOrder(player, "request") then
+                    SendSortOrderState(player)
+                end
+            end)
+
+            AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_APPLY_RPC_NAME,
+                function(player, serialized)
+                    if not CanUpdateSortOrder(player, "apply") then
                         return
                     end
 
-                    if ACTIVE_SORT_ORDER_SCREEN ~= nil then
-                        GLOBAL.TheFrontEnd:PopScreen(ACTIVE_SORT_ORDER_SCREEN)
+                    local preferences = player.components.betterinventory_sortprefs
+                    local active_preset, orders = Categories.DeserializePresetState(serialized)
+                    if active_preset == nil or not preferences:SetState(active_preset, orders) then
+                        DebugWarn("Rejected invalid sort-order request for "
+                            .. tostring(player.userid or player.GUID))
+                        return
                     end
 
-                    local SortOrderScreen = require("widgets/betterinventory_sortorderscreen")
-                    local screen
-                    screen = SortOrderScreen(current_serialized, default_serialized,
-                        function(serialized)
-                            local rpc = GLOBAL.GetModRPC(SORT_RPC_NAMESPACE, SORT_ORDER_APPLY_RPC_NAME)
-                            GLOBAL.SendModRPCToServer(rpc, serialized)
-                        end,
-                        function()
-                            if ACTIVE_SORT_ORDER_SCREEN == screen then
-                                ACTIVE_SORT_ORDER_SCREEN = nil
-                            end
-                        end)
-                    ACTIVE_SORT_ORDER_SCREEN = screen
-                    GLOBAL.TheFrontEnd:PushScreen(screen)
+                    DebugLog("Updated sort order for " .. tostring(player.userid or player.GUID))
                 end)
         end
-
-        AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_REQUEST_RPC_NAME, function(player)
-            if CanUpdateSortOrder(player, "request") then
-                SendSortOrderState(player)
-            end
-        end)
-
-        AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_APPLY_RPC_NAME,
-            function(player, serialized)
-                if not CanUpdateSortOrder(player, "apply") then
-                    return
-                end
-
-                local preferences = player.components.betterinventory_sortprefs
-                local active_preset, orders = Categories.DeserializePresetState(serialized)
-                if active_preset == nil or not preferences:SetState(active_preset, orders) then
-                    DebugWarn("Rejected invalid sort-order request for "
-                        .. tostring(player.userid or player.GUID))
-                    return
-                end
-
-                DebugLog("Updated sort order for " .. tostring(player.userid or player.GUID))
-            end)
 
         if CONFIG.quick_stack_enabled and AddClientModRPCHandler ~= nil then
             AddClientModRPCHandler(SORT_RPC_NAMESPACE, QUICK_STACK_RESULT_RPC_NAME,
@@ -999,7 +1006,7 @@ function Sorting.Setup(context)
                 end
             end
 
-            if sort_order_key ~= nil then
+            if sort_order_enabled and sort_order_key ~= nil then
                 local conflicts_with_sort = CONFIG.sort_enabled and sort_order_key == sort_key
                 local conflicts_with_bag_sort = CONFIG.bag_sort_enabled and sort_order_key == bag_sort_key
                 local conflicts_with_quick_stack = CONFIG.quick_stack_enabled

@@ -1031,7 +1031,9 @@ end
 
 local SortCategories = require("betterinventory/categories")
 
-if CONFIG.sort_enabled or CONFIG.bag_sort_enabled then
+local SORT_ORDER_ENABLED = CONFIG.sort_enabled or CONFIG.bag_sort_enabled
+
+if SORT_ORDER_ENABLED then
     AddPlayerPostInit(function(inst)
         if GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld.ismastersim and inst.components ~= nil then
             if inst.components.betterinventory_sortprefs == nil then
