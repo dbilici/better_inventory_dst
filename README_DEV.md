@@ -10,6 +10,9 @@
    persist (the panel-open request no longer rate limits Apply).
 4. Verify watering cans and garden hoes sort with Tools rather than Food, and
    that fertilizers in the GARDENING filter land in an acceptable slot group.
+5. Sort an already sorted inventory and then an intentionally shuffled
+   inventory; only the changed sort should play the local inventory-move
+   feedback sound. Repeat once for equipped bag sort.
 
 ---
 

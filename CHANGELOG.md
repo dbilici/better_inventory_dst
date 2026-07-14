@@ -27,6 +27,9 @@
 - Sort-order RPCs and the panel hotkey are now registered only when main or bag
   sorting is enabled, so Quick Stack-only configurations do not expose a dead
   panel path.
+- Main-inventory and equipped-bag sort now play the same local inventory-move
+  feedback sound as Quick Stack, but only when the operation actually changes
+  item positions or stack sizes.
 - The sort-order panel's open request and Apply All are rate limited
   independently, so a fast Apply can no longer be silently dropped by the
   preceding panel-open request.

@@ -19,6 +19,7 @@ function Sorting.Setup(context)
     local BAG_SORT_RPC_NAME = "SortBag"
     local QUICK_STACK_RPC_NAME = "QuickStackToBag"
     local QUICK_STACK_RESULT_RPC_NAME = "QuickStackResult"
+    local SORT_FEEDBACK_RESULT_RPC_NAME = "SortFeedbackResult"
     local SORT_ORDER_REQUEST_RPC_NAME = "RequestSortOrder"
     local SORT_ORDER_APPLY_RPC_NAME = "ApplySortOrder"
     local SORT_ORDER_STATE_RPC_NAME = "SortOrderState"
@@ -306,6 +307,34 @@ function Sorting.Setup(context)
         return merged
     end
 
+    local function GetStackSize(item)
+        local stackable = item ~= nil and item.components ~= nil and item.components.stackable or nil
+        return stackable ~= nil and stackable.StackSize ~= nil and stackable:StackSize() or 1
+    end
+
+    local function SnapshotSlots(slot_owner, num_slots)
+        local snapshot = {}
+        for slot = 1, num_slots do
+            local item = slot_owner:GetItemInSlot(slot)
+            snapshot[slot] = {
+                item = item,
+                stack_size = GetStackSize(item),
+            }
+        end
+        return snapshot
+    end
+
+    local function SlotsChanged(snapshot, slot_owner, num_slots)
+        for slot = 1, num_slots do
+            local item = slot_owner:GetItemInSlot(slot)
+            local previous = snapshot[slot]
+            if previous == nil or previous.item ~= item or previous.stack_size ~= GetStackSize(item) then
+                return true
+            end
+        end
+        return false
+    end
+
     local ITEM_CONDITION_COMPONENTS = { "finiteuses", "fueled", "armor", "perishable" }
 
     local function GetItemConditionPercent(item)
@@ -452,6 +481,7 @@ function Sorting.Setup(context)
 
         local num_slots = inventory.GetNumSlots ~= nil and inventory:GetNumSlots() or MAX_ITEM_SLOTS
         num_slots = math.min(num_slots or MAX_ITEM_SLOTS, MAX_ITEM_SLOTS)
+        local before_slots = SnapshotSlots(inventory, num_slots)
 
         local items = {}
         local occupied_slots = {}
@@ -518,7 +548,7 @@ function Sorting.Setup(context)
         DebugLog("Sorted inventory for " .. tostring(player.name or player.prefab or "player")
             .. " using mode=" .. tostring(CONFIG.sort_mode)
             .. ", merge_stacks=" .. tostring(CONFIG.sort_merge_stacks))
-        return true
+        return SlotsChanged(before_slots, inventory, num_slots)
     end
 
     local function SortBagForPlayer(player)
@@ -549,6 +579,7 @@ function Sorting.Setup(context)
         if num_slots <= 0 then
             return false
         end
+        local before_slots = SnapshotSlots(container, num_slots)
 
         local items = {}
         local occupied_slots = {}
@@ -611,7 +642,7 @@ function Sorting.Setup(context)
         DebugLog("Sorted equipped bag for " .. tostring(player.name or player.prefab or "player")
             .. " using mode=" .. tostring(CONFIG.sort_mode)
             .. ", merge_stacks=" .. tostring(CONFIG.sort_merge_stacks))
-        return true
+        return SlotsChanged(before_slots, container, num_slots)
     end
 
     local function QuickStackToBagForPlayer(player)
@@ -765,6 +796,15 @@ function Sorting.Setup(context)
         GLOBAL.SendModRPCToClient(rpc, player.userid, moved_units)
     end
 
+    local function SendSortFeedbackResult(player, changed)
+        if not changed or player == nil or player.userid == nil then
+            return
+        end
+
+        local rpc = GLOBAL.GetClientModRPC(SORT_RPC_NAMESPACE, SORT_FEEDBACK_RESULT_RPC_NAME)
+        GLOBAL.SendModRPCToClient(rpc, player.userid, 1)
+    end
+
     local function SendSortOrderState(player)
         if player == nil or player.userid == nil then
             return
@@ -833,6 +873,15 @@ function Sorting.Setup(context)
     if sort_order_enabled or CONFIG.quick_stack_enabled then
         if AddClientModRPCHandler ~= nil then
             if sort_order_enabled then
+                AddClientModRPCHandler(SORT_RPC_NAMESPACE, SORT_FEEDBACK_RESULT_RPC_NAME,
+                    function(changed)
+                        changed = GLOBAL.tonumber(changed) or 0
+                        local sound = GLOBAL.TheFrontEnd ~= nil and GLOBAL.TheFrontEnd:GetSound() or nil
+                        if changed > 0 and sound ~= nil then
+                            sound:PlaySound("dontstarve/HUD/click_move")
+                        end
+                    end)
+
                 AddClientModRPCHandler(SORT_RPC_NAMESPACE, SORT_ORDER_STATE_RPC_NAME,
                     function(current_serialized, default_serialized)
                         if GLOBAL.TheFrontEnd == nil then
@@ -900,13 +949,15 @@ function Sorting.Setup(context)
 
         if CONFIG.sort_enabled then
             AddModRPCHandler(SORT_RPC_NAMESPACE, SORT_RPC_NAME, function(player)
-                HandleInventoryRPC(player, SortInventoryForPlayer, "inventory sort")
+                HandleInventoryRPC(player, SortInventoryForPlayer, "inventory sort",
+                    SendSortFeedbackResult)
             end)
         end
 
         if CONFIG.bag_sort_enabled then
             AddModRPCHandler(SORT_RPC_NAMESPACE, BAG_SORT_RPC_NAME, function(player)
-                HandleInventoryRPC(player, SortBagForPlayer, "bag sort")
+                HandleInventoryRPC(player, SortBagForPlayer, "bag sort",
+                    SendSortFeedbackResult)
             end)
         end
 

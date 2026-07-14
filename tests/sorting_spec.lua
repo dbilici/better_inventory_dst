@@ -179,6 +179,7 @@ end
 
 local function NewInstalledSortingApi(config)
     local handlers = {}
+    local client_calls = {}
     local api = Sorting.Setup({
         GLOBAL = {
             GetTime = function()
@@ -192,6 +193,16 @@ local function NewInstalledSortingApi(config)
             pcall = pcall,
             setmetatable = setmetatable,
             tonumber = tonumber,
+            GetClientModRPC = function(namespace, name)
+                return namespace .. ":" .. name
+            end,
+            SendModRPCToClient = function(rpc, userid, value)
+                table.insert(client_calls, {
+                    rpc = rpc,
+                    userid = userid,
+                    value = value,
+                })
+            end,
             CRAFTING_FILTERS = {},
             AllRecipes = {},
         },
@@ -210,6 +221,7 @@ local function NewInstalledSortingApi(config)
         end,
     })
     api.handlers = handlers
+    api.client_calls = client_calls
     return api
 end
 
@@ -309,6 +321,206 @@ do
         "sort-order request RPC should register when inventory sort is enabled")
     assert(sort_enabled.handlers["BetterInventory:ApplySortOrder"] ~= nil,
         "sort-order apply RPC should register when inventory sort is enabled")
+end
+
+local function NewInventoryPlayer(items)
+    local player = {
+        userid = "test_player",
+        components = {},
+    }
+    function player:IsValid()
+        return true
+    end
+
+    local inventory = {
+        isloading = false,
+        slots = {},
+    }
+    player.components.inventory = inventory
+
+    for slot, item in ipairs(items) do
+        inventory.slots[slot] = item
+        item.components.inventoryitem = { owner = player }
+    end
+
+    function inventory:GetActiveItem()
+        return nil
+    end
+    function inventory:GetNumSlots()
+        return #items
+    end
+    function inventory:GetItemInSlot(slot)
+        return self.slots[slot]
+    end
+    function inventory:RemoveItem(item)
+        for slot, candidate in pairs(self.slots) do
+            if candidate == item then
+                self.slots[slot] = nil
+                item.components.inventoryitem.owner = nil
+                return item
+            end
+        end
+    end
+    function inventory:GiveItem(item, slot)
+        if slot ~= nil and self.slots[slot] == nil then
+            self.slots[slot] = item
+            item.components.inventoryitem.owner = player
+            return true
+        end
+
+        for candidate_slot = 1, #items do
+            if self.slots[candidate_slot] == nil then
+                self.slots[candidate_slot] = item
+                item.components.inventoryitem.owner = player
+                return true
+            end
+        end
+
+        return false
+    end
+
+    return player, inventory
+end
+
+local function NewBagSortPlayer(items)
+    local player = {
+        userid = "test_player",
+        components = {},
+    }
+    function player:IsValid()
+        return true
+    end
+
+    local bag_inst = {
+        IsValid = function()
+            return true
+        end,
+    }
+    local bag = {
+        inst = bag_inst,
+        readonlycontainer = false,
+        slots = {},
+    }
+    for slot, item in ipairs(items) do
+        bag.slots[slot] = item
+        item.components.inventoryitem = { owner = bag_inst }
+    end
+
+    function bag:GetNumSlots()
+        return #items
+    end
+    function bag:GetItemInSlot(slot)
+        return self.slots[slot]
+    end
+    function bag:RemoveItemBySlot(slot)
+        local item = self.slots[slot]
+        if item ~= nil then
+            self.slots[slot] = nil
+            item.components.inventoryitem.owner = nil
+        end
+        return item
+    end
+    function bag:GiveItem(item, slot)
+        if slot ~= nil and self.slots[slot] == nil then
+            self.slots[slot] = item
+            item.components.inventoryitem.owner = bag_inst
+            return true
+        end
+
+        for candidate_slot = 1, #items do
+            if self.slots[candidate_slot] == nil then
+                self.slots[candidate_slot] = item
+                item.components.inventoryitem.owner = bag_inst
+                return true
+            end
+        end
+
+        return false
+    end
+
+    local inventory = {
+        isloading = false,
+    }
+    player.components.inventory = inventory
+    function inventory:GetActiveItem()
+        return nil
+    end
+    function inventory:GetOverflowContainer()
+        return bag
+    end
+
+    return player, bag
+end
+
+do
+    local sort_api = NewInstalledSortingApi({
+        sort_enabled = true,
+        bag_sort_enabled = false,
+        quick_stack_enabled = false,
+        sort_mode = "category",
+        sort_merge_stacks = true,
+        sort_category_priorities = Categories.DEFAULT_PRIORITIES,
+    })
+    local rocks = NewItem("rocks")
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local player, inventory = NewInventoryPlayer({ rocks, axe })
+
+    sort_api.handlers["BetterInventory:SortInventory"](player)
+
+    assert(inventory:GetItemInSlot(1) == axe and inventory:GetItemInSlot(2) == rocks,
+        "inventory sort handler should reorder items")
+    assert(#sort_api.client_calls == 1
+        and sort_api.client_calls[1].rpc == "BetterInventory:SortFeedbackResult"
+        and sort_api.client_calls[1].userid == "test_player"
+        and sort_api.client_calls[1].value == 1,
+        "changed sort should send one feedback sound RPC")
+end
+
+do
+    local sort_api = NewInstalledSortingApi({
+        sort_enabled = true,
+        bag_sort_enabled = false,
+        quick_stack_enabled = false,
+        sort_mode = "category",
+        sort_merge_stacks = true,
+        sort_category_priorities = Categories.DEFAULT_PRIORITIES,
+    })
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local rocks = NewItem("rocks")
+    local player = NewInventoryPlayer({ axe, rocks })
+
+    sort_api.handlers["BetterInventory:SortInventory"](player)
+
+    assert(#sort_api.client_calls == 0,
+        "no-op sort should not send feedback sound RPC")
+end
+
+do
+    local sort_api = NewInstalledSortingApi({
+        sort_enabled = false,
+        bag_sort_enabled = true,
+        quick_stack_enabled = false,
+        sort_mode = "category",
+        sort_merge_stacks = true,
+        sort_category_priorities = Categories.DEFAULT_PRIORITIES,
+    })
+    local rocks = NewItem("rocks")
+    local axe = NewItem("axe", {
+        components = { tool = {} },
+    })
+    local player, bag = NewBagSortPlayer({ rocks, axe })
+
+    sort_api.handlers["BetterInventory:SortBag"](player)
+
+    assert(bag:GetItemInSlot(1) == axe and bag:GetItemInSlot(2) == rocks,
+        "bag sort handler should reorder bag items")
+    assert(#sort_api.client_calls == 1
+        and sort_api.client_calls[1].rpc == "BetterInventory:SortFeedbackResult",
+        "changed bag sort should send one feedback sound RPC")
 end
 
 do
