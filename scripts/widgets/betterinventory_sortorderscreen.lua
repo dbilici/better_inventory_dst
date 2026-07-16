@@ -193,8 +193,8 @@ end
 
 function SortOrderScreen:RefreshNote()
     local bag_note = self.sort_bag_with_inventory
-        and " F5: inventory + bag."
-        or " F5: inventory only."
+        and " F7: inventory + bag."
+        or " F7: inventory only."
     if not self.bag_sort_available then
         bag_note = " Bag sort is disabled in mod settings."
     end

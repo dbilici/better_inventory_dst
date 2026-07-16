@@ -34,6 +34,9 @@
   local feedback sound for the requesting player.
 - Added a per-player sort-order panel toggle that lets the main inventory sort
   hotkey also sort the equipped bag in the same server-authoritative request.
+- Changed the default active hotkeys to `F7` for sort and `F8` for the
+  sort-order panel. Separate bag-only sort and Quick Stack remain configurable
+  but no longer register active default hotkeys.
 - The sort-order panel's open request and Apply All are rate limited
   independently, so a fast Apply can no longer be silently dropped by the
   preceding panel-open request.

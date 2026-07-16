@@ -1014,10 +1014,17 @@ function Sorting.Setup(context)
                 KEY_V = GLOBAL.KEY_V,
             }
 
-            local sort_key = KEY_MAP[CONFIG.sort_key] or GLOBAL.KEY_F5
-            local bag_sort_key = KEY_MAP[CONFIG.bag_sort_key] or GLOBAL.KEY_F6
-            local quick_stack_key = KEY_MAP[CONFIG.quick_stack_key] or GLOBAL.KEY_F7
-            local sort_order_key = KEY_MAP[CONFIG.sort_order_key] or GLOBAL.KEY_F8
+            local function ResolveKey(config_key, fallback)
+                if config_key == "KEY_NONE" then
+                    return nil
+                end
+                return KEY_MAP[config_key] or fallback
+            end
+
+            local sort_key = ResolveKey(CONFIG.sort_key, GLOBAL.KEY_F7)
+            local bag_sort_key = ResolveKey(CONFIG.bag_sort_key, nil)
+            local quick_stack_key = ResolveKey(CONFIG.quick_stack_key, nil)
+            local sort_order_key = ResolveKey(CONFIG.sort_order_key, GLOBAL.KEY_F8)
 
             local function CanUseSortHotkey()
                 if GLOBAL.ThePlayer == nil or GLOBAL.ThePlayer.HUD == nil then

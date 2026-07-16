@@ -3,9 +3,9 @@
 1. Sort an inventory holding both condition-tracked and condition-less copies
    of the same prefab; the sort must complete and condition-less copies must
    sort as if pristine.
-2. Press the main sort key and immediately the bag sort and Quick Stack keys;
-   each operation must run once. Cooldowns are per operation, and spamming a
-   single key must still be rejected within its cooldown.
+2. Configure separate bag sort and Quick Stack hotkeys, then press the main sort
+   key and immediately those keys; each operation must run once. Cooldowns are
+   per operation, and spamming a single key must still be rejected within its cooldown.
 3. Open the sort panel and press Apply All immediately; the new order must
    persist (the panel-open request no longer rate limits Apply).
 4. Verify watering cans and garden hoes sort with Tools rather than Food, and
@@ -18,6 +18,9 @@
 7. In the sort-order panel, enable `Sort Bag Too`, press the main sort hotkey,
    and verify both the main inventory and equipped bag sort once. Disable it
    and verify the same hotkey leaves the equipped bag unchanged.
+8. With default settings, verify the mod only registers active gameplay
+   hotkeys for `F7` sort and `F8` sort-order panel. Quick Stack and the
+   separate bag-only sort hotkey should remain inactive until configured.
 
 ---
 
@@ -42,10 +45,10 @@ In-game sort-order panel checks:
    keeps their own order while sorting on the same server.
 4. On the Default tab, press Reset Tab then Apply All and verify the host's
    configured default order returns without changing the other preset tabs.
-5. Set the panel hotkey equal to F5/F6/F7 and verify it is disabled with a
-   warning instead of dispatching two actions.
+5. Set the panel hotkey equal to the sort, bag sort, or Quick Stack hotkey and
+   verify it is disabled with a warning instead of dispatching two actions.
 6. Apply Combat, Building, and Survivor in turn; verify each preset changes the
-   visible category order and both F5/F6 follow it.
+   visible category order and both main and bag sort follow it.
 7. Apply Anti Drop with grass/twigs plus valuable combat gear. Verify expendable
    materials occupy the earliest sorted slots. Frog theft remains best effort
    because vanilla scans `inventory.itemslots` with `pairs`.
@@ -75,12 +78,15 @@ Manual slot-lock checks:
 
 Equipped bag-sort checks:
 
-1. Equip a backpack containing mixed item categories and partial stacks, then
-   press `F6`; verify only the bag contents are sorted and merged. Repeat while
+1. Equip a backpack containing mixed item categories and partial stacks, configure
+   a separate bag sort hotkey, then press it; verify only the bag contents are sorted and merged. Repeat while
    the bag UI is closed; server-side sorting should still work.
-2. Confirm `F5` still sorts only the main inventory.
-3. Hold an active cursor item and press `F6`; verify neither container changes.
-4. Press `F6` with no equipped bag; verify there is no error or dropped item.
+2. Confirm the main sort hotkey sorts only the main inventory while `Sort Bag Too`
+   is disabled.
+3. Hold an active cursor item and press the configured bag sort hotkey; verify
+   neither container changes.
+4. Press the configured bag sort hotkey with no equipped bag; verify there is
+   no error or dropped item.
 5. Test a restricted bag such as Seed Pack-It and verify every item remains in
    a valid bag slot.
 6. Set both sort hotkeys to the same key and verify the bag hotkey is disabled
@@ -89,17 +95,18 @@ Equipped bag-sort checks:
 Quick Stack to Bag checks:
 
 1. Put a partial stack in the equipped bag and a matching stack in the main
-   inventory; press `F7` and verify only the matching quantity moves and one
-   inventory-move sound plays.
+   inventory; enable/configure Quick Stack, press its hotkey, and verify only
+   the matching quantity moves and one inventory-move sound plays.
 2. Fill the bag target nearly to capacity and verify leftovers return to the
    source inventory slot.
 3. Verify an item type not already present in the bag does not move.
 4. Lock a matching source slot with `L`; verify Quick Stack leaves it untouched.
 5. Hold an active cursor item, remove the bag, and close the bag UI in separate
    runs; the first two cases must be safe no-ops and the closed bag must work.
-6. Set `F7` as another sort hotkey and verify Quick Stack is disabled with a
-   warning instead of dispatching two operations.
-7. Press `F7` when nothing can move and verify no success sound plays.
+6. Set the Quick Stack key as another sort hotkey and verify Quick Stack is
+   disabled with a warning instead of dispatching two operations.
+7. Press the configured Quick Stack hotkey when nothing can move and verify no
+   success sound plays.
 
 Test matrix:
 
@@ -198,6 +205,6 @@ This version places the lower row at y=0 and the upper row above it. It also red
 - Inventory Layout: Compact 2 x 12
 - Inventory UI Scale: Compact
 - Inventory Sort: Enabled
-- Sort Hotkey: F5
+- Sort Hotkey: F7
 
 If the UI is still too wide, set Inventory UI Scale to Small.

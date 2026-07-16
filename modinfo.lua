@@ -17,8 +17,8 @@ Current v0.6.0 development build:
 - Per-player option for the main sort hotkey to also sort the equipped bag
 - Default / Combat / Building / Survivor / Anti Drop sort presets
 - Independent editable preset tabs with per-tab reset and Apply All
-- Separate hotkey to sort the equipped bag without moving items between containers
-- Quick Stack hotkey fills compatible stacks already present in the equipped bag
+- Main sort hotkey can also sort the equipped bag when enabled per player
+- Optional Quick Stack fills compatible stacks already present in the equipped bag
 - Hover a main inventory slot and press a configurable key to lock it in place
 - Manual slot locks persist across save/reload
 - Server-side sort cooldown, re-entrancy lock, and item recovery
@@ -162,7 +162,7 @@ configuration_options = {
             {description = "C", data = "KEY_C"},
             {description = "V", data = "KEY_V"},
         },
-        default = "KEY_F5",
+        default = "KEY_F7",
     },
     {
         name = "sort_order_key",
@@ -188,8 +188,9 @@ configuration_options = {
     {
         name = "bag_sort_key",
         label = "Bag Sort Hotkey",
-        hover = "Press this key to sort the equipped bag. Use a different key from the main inventory sort.",
+        hover = "Optional separate bag-only sort key. Leave disabled to use only the main Sort Hotkey + Sort Bag Too.",
         options = {
+            {description = "Disabled", data = "KEY_NONE"},
             {description = "F6", data = "KEY_F6"},
             {description = "F7", data = "KEY_F7"},
             {description = "F8", data = "KEY_F8"},
@@ -197,20 +198,21 @@ configuration_options = {
             {description = "B", data = "KEY_B"},
             {description = "G", data = "KEY_G"},
         },
-        default = "KEY_F6",
+        default = "KEY_NONE",
     },
     {
         name = "quick_stack_enabled",
         label = "Quick Stack to Bag",
         hover = "Move main-inventory items only into compatible stacks already present in the equipped bag.",
         options = boolean_options,
-        default = true,
+        default = false,
     },
     {
         name = "quick_stack_key",
         label = "Quick Stack Hotkey",
         hover = "Press this key to fill matching stacks already present in the equipped bag.",
         options = {
+            {description = "Disabled", data = "KEY_NONE"},
             {description = "F7", data = "KEY_F7"},
             {description = "F8", data = "KEY_F8"},
             {description = "F9", data = "KEY_F9"},
@@ -218,7 +220,7 @@ configuration_options = {
             {description = "B", data = "KEY_B"},
             {description = "G", data = "KEY_G"},
         },
-        default = "KEY_F7",
+        default = "KEY_NONE",
     },
     {
         name = "slot_lock_enabled",
