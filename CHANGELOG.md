@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.0 - Feature Release (2026-07-16)
 
 - Added an in-game sort-order panel on a configurable hotkey (default `F8`).
 - Added Default, Combat, Building, Survivor, and best-effort Anti Drop presets.

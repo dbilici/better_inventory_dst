@@ -5,9 +5,10 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.6.0-dev` adds configurable category priorities on top of the validated
-`v0.5.0` multiplayer-safe sorting core. Pre-1.0 Workshop builds remain Friends
-Only while features and compatibility are still evolving.
+`v0.6.0` adds configurable per-player sort presets, single-key inventory +
+bag sorting, and safer default hotkeys on top of the validated `v0.5.0`
+multiplayer-safe sorting core. Pre-1.0 Workshop builds remain Friends Only
+while features and compatibility are still evolving.
 
 ## Features
 

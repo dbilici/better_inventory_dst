@@ -1,6 +1,6 @@
 # Pack & Sort — Steam Workshop Copy
 
-This file contains ready-to-paste copy and the release checklist for `v0.5.0`.
+This file contains ready-to-paste copy and the release checklist for `v0.6.0`.
 It is not loaded by the mod.
 
 ## Title
@@ -65,10 +65,10 @@ validated by the server.
 
 [h2]Validation[/h2]
 
-Version 0.5.0 has passed automated sorting regression tests plus single-player,
-host, dedicated-server, and three-player validation. Multiplayer coverage
-includes late join, reconnect, death/revive, bag operations, and Forest/Caves
-travel.
+Version 0.6.0 has passed automated sorting regression tests. The `v0.5.0`
+multiplayer core was previously validated with host, dedicated-server, and
+three-player coverage including late join, reconnect, death/revive, bag
+operations, and Forest/Caves travel.
 
 [h2]Compatibility[/h2]
 
@@ -86,19 +86,21 @@ https://github.com/dbilici/dst-pack-sort
 
 ## Change notes
 
-[h1]v0.5.0[/h1]
+[h1]v0.6.0[/h1]
 
 [list]
-[*]Added Quick Stack to compatible stacks already present in the equipped bag.
-[*]Added independent equipped-bag sorting that works with the bag UI closed.
-[*]Added persistent manual main-inventory slot locks.
-[*]Made condition and equal-item sorting deterministic across repeated sorts.
-[*]Added server-side cooldown, re-entrancy, recovery, and protocol diagnostics.
-[*]Added automated regression coverage for sorting and Quick Stack behavior.
+[*]Added the in-game category order panel with Default, Combat, Building, Survivor, and Anti Drop presets.
+[*]Added per-player persistent sort preferences and editable preset tabs.
+[*]Added Sort Bag Too, so the main sort hotkey can also sort the equipped bag in the same request.
+[*]Changed default active hotkeys to F7 for sort and F8 for the sort-order panel.
+[*]Made separate bag-only sort and Quick Stack configurable but inactive by default.
+[*]Improved category classification using DST's native crafting filters.
+[*]Added feedback sounds for changed sorts, slot-lock toggles, and successful Apply actions.
+[*]Hardened sorting stability for mixed condition-tracked and condition-less items.
 [/list]
 
-Validated with three players, including late join, reconnect, death/revive,
-bag operations, and Forest/Caves travel.
+Validated with automated sorting regression coverage. Keep this pre-1.0 build
+Friends Only while the subscribed Workshop copy is smoke-tested.
 
 ## Workshop visibility policy
 
@@ -122,21 +124,24 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 
 - [x] Subscribe/upload account owns the Workshop item.
 - [x] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
-- [x] `modinfo.lua` reports `0.5.0` and API version 10.
+- [x] `modinfo.lua` reports `0.6.0` and API version 10.
 - [x] Preview image and screenshots match the current 2 x 12 layout.
 - [x] Workshop description and change notes are pasted from this file.
-- [x] Visibility is restricted until the final release is tagged.
-- [x] Host and joining clients use the same build.
-- [x] Single-player/host smoke test passes after the uploaded copy is subscribed.
-- [x] Dedicated server loads the subscribed Workshop copy without Lua errors.
-- [x] Issue #3 multiplayer release gate is complete.
+- [x] Visibility remains Friends Only for this pre-1.0 release.
+- [x] Automated sorting regression suite passes.
+- [ ] Upload `v0.6.0` as Friends Only.
+- [ ] Host smoke test passes after the uploaded copy is subscribed.
+- [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
+- [ ] If another player is available, confirm the subscribed copy joins cleanly.
 
-## Final-release checklist
+## v0.6.0 release checklist
 
-- [x] Complete the multiplayer late-join, reconnect, death/revive, and caves matrix.
-- [x] Confirm no `[Pack & Sort][WARN]` replication-contract messages.
-- [x] Update version references from `0.5.0-rc1` to `0.5.0`.
-- [ ] Add final change notes and tag `v0.5.0`.
+- [x] Update version references from `0.6.0-dev` to `0.6.0`.
+- [x] Add v0.6.0 change notes.
+- [ ] Upload as Friends Only.
+- [ ] Smoke test the subscribed Workshop copy.
+- [ ] Confirm no `[Pack & Sort][WARN]` messages or Lua errors.
+- [ ] Tag `v0.6.0` after the uploaded copy is verified.
 - [x] Keep pre-1.0 Workshop visibility restricted to Friends Only.
 - [ ] Change Workshop visibility to Public with `v1.0.0`.
 

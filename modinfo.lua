@@ -2,7 +2,7 @@ name = "Pack & Sort"
 description = [[
 Expanded inventory + utility equipment slots + inventory sort for Don't Starve Together.
 
-Current v0.6.0 development build:
+Current v0.6.0 build:
 - Optional 24-slot inventory foundation
 - Unified server/client/classified slot count for usable slots 16-24
 - Namespaced equipment slots to avoid collisions with other mods
@@ -30,7 +30,7 @@ Current v0.6.0 development build:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.6.0-dev"
+version = "0.6.0"
 api_version = 10
 priority = 100
 
