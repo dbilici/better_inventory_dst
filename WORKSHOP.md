@@ -1,6 +1,6 @@
 # Pack & Sort — Steam Workshop Copy
 
-This file contains ready-to-paste copy and the release checklist for `v0.6.0`.
+This file contains ready-to-paste copy and the release checklist for `v0.7.0`.
 It is not loaded by the mod.
 
 ## Title
@@ -23,7 +23,7 @@ without moving item authority away from the server.
 [h2]Features[/h2]
 
 [list]
-[*]Optional 24-slot main inventory with a compact 2 x 12 layout
+[*]Optional 24-slot main inventory with a scaled vanilla single row or compact 2 x 12 layout
 [*]Separate optional Bag, Armor, and Accessory equipment slots
 [*]Deterministic category sorting with optional stack merging
 [*]Craftable-item categories derived from DST's native crafting filters
@@ -65,7 +65,7 @@ validated by the server.
 
 [h2]Validation[/h2]
 
-Version 0.6.0 has passed automated sorting regression tests. The `v0.5.0`
+Version 0.7.0 has passed automated sorting regression tests. The `v0.5.0`
 multiplayer core was previously validated with host, dedicated-server, and
 three-player coverage including late join, reconnect, death/revive, bag
 operations, and Forest/Caves travel.
@@ -86,9 +86,11 @@ https://github.com/dbilici/dst-pack-sort
 
 ## Change notes
 
-[h1]v0.6.0[/h1]
+[h1]v0.7.0[/h1]
 
 [list]
+[*]Added a scaled Vanilla Single Row layout for expanded 24-slot inventories.
+[*]Kept Safe 2 x 12 as the compact two-row option for players who prefer it.
 [*]Added the in-game category order panel with Default, Combat, Building, Survivor, and Anti Drop presets.
 [*]Added per-player persistent sort preferences and editable preset tabs.
 [*]Added Sort Bag Too, so the main sort hotkey can also sort the equipped bag in the same request.
@@ -124,24 +126,24 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 
 - [x] Subscribe/upload account owns the Workshop item.
 - [x] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
-- [x] `modinfo.lua` reports `0.6.0` and API version 10.
-- [x] Preview image and screenshots match the current 2 x 12 layout.
+- [x] `modinfo.lua` reports `0.7.0` and API version 10.
+- [x] Preview image and screenshots match the current expanded inventory layouts.
 - [x] Workshop description and change notes are pasted from this file.
 - [x] Visibility remains Friends Only for this pre-1.0 release.
 - [x] Automated sorting regression suite passes.
-- [ ] Upload `v0.6.0` as Friends Only.
+- [ ] Upload `v0.7.0` as Friends Only.
 - [ ] Host smoke test passes after the uploaded copy is subscribed.
 - [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
 - [ ] If another player is available, confirm the subscribed copy joins cleanly.
 
-## v0.6.0 release checklist
+## v0.7.0 release checklist
 
-- [x] Update version references from `0.6.0-dev` to `0.6.0`.
-- [x] Add v0.6.0 change notes.
+- [x] Update version references from `0.6.0` to `0.7.0`.
+- [x] Add v0.7.0 change notes.
 - [ ] Upload as Friends Only.
 - [ ] Smoke test the subscribed Workshop copy.
 - [ ] Confirm no `[Pack & Sort][WARN]` messages or Lua errors.
-- [ ] Tag `v0.6.0` after the uploaded copy is verified.
+- [ ] Tag `v0.7.0` after the uploaded copy is verified.
 - [x] Keep pre-1.0 Workshop visibility restricted to Friends Only.
 - [ ] Change Workshop visibility to Public with `v1.0.0`.
 

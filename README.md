@@ -5,14 +5,16 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.6.0` adds configurable per-player sort presets, single-key inventory +
-bag sorting, and safer default hotkeys on top of the validated `v0.5.0`
-multiplayer-safe sorting core. Pre-1.0 Workshop builds remain Friends Only
-while features and compatibility are still evolving.
+`v0.7.0` adds a scaled vanilla single-row option for expanded 24-slot
+inventories on top of the configurable per-player sort presets, single-key
+inventory + bag sorting, and safer default hotkeys from `v0.6.0`. Pre-1.0
+Workshop builds remain Friends Only while features and compatibility are still
+evolving.
 
 ## Features
 
-- Optional 24-slot main inventory with a compact 2 x 12 HUD layout.
+- Optional 24-slot main inventory with either a scaled vanilla single row or a
+  compact 2 x 12 HUD layout.
 - Separate optional Bag, Armor, and Accessory equipment slots.
 - Deterministic category sorting with stack merging and condition ordering.
 - Craftable-item classification based on DST's native crafting filters.
