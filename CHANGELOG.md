@@ -9,6 +9,9 @@
   `Vanilla Single Row` keeps one row, while `Safe 2 x 12` wraps to two rows.
 - HUD layout and inventory UI scale are now client-local preferences instead of
   server-wide world settings.
+- Polished the F8 sort-order panel with clearer preset descriptions, a cleaner
+  selectable category list, single Move Up/Move Down controls, keyboard
+  navigation, and simpler Apply/Reset wording.
 
 ## v0.6.0 - Feature Release (2026-07-16)
 

@@ -27,6 +27,10 @@
 10. With two clients on the same server, set one client to `Vanilla Single Row`
     and the other to `Safe 2 x 12`; verify each player keeps their own HUD
     layout without changing the server/world mod configuration.
+11. Open the F8 sort-order panel, click several category rows, move the selected
+    row with the shared Move Up/Move Down buttons, then repeat with keyboard
+    controls. Verify Apply saves every preset draft and Reset This Preset only
+    resets the active preset.
 
 ---
 
