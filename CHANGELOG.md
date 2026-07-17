@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7.0 - Feature Release (2026-07-16)
+## v0.8.0 - Feature Release (2026-07-17)
 
 - Expanded 24-slot inventories can now keep the Vanilla layout as a scaled
   single row, preventing the long bar from overlapping the equipment cluster or

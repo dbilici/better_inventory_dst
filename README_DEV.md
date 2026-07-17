@@ -1,4 +1,4 @@
-# v0.7.0 maintenance checks
+# v0.8.0 maintenance checks
 
 1. Sort an inventory holding both condition-tracked and condition-less copies
    of the same prefab; the sort must complete and condition-less copies must
