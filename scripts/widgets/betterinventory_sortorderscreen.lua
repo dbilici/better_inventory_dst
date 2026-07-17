@@ -21,11 +21,12 @@ local PRESET_DESCRIPTIONS = {
 }
 
 local SortOrderScreen = Class(Screen, function(self, current_serialized, default_serialized,
-        on_apply, on_close)
+        on_apply, on_close, hud_settings, on_hud_change, hud_scale_options)
     Screen._ctor(self, "BetterInventorySortOrderScreen")
 
     self.on_apply = on_apply
     self.on_close = on_close
+    self.on_hud_change = on_hud_change
 
     local active_tab, current_orders, current_settings = Categories.DeserializePresetState(current_serialized)
     local _, base_orders = Categories.DeserializePresetState(default_serialized)
@@ -38,33 +39,44 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
     self.bag_sort_available = current_settings == nil
         or current_settings.bag_sort_available ~= false
     self.selected_index = 1
+    self.drag_source_index = nil
+    self.drag_target_index = nil
+    self.hud_settings = {
+        layout = hud_settings ~= nil and hud_settings.layout or "2x12",
+        scale = hud_settings ~= nil and hud_settings.scale or 0.85,
+    }
+    self.hud_scale_options = hud_scale_options or {
+        { label = "Small", value = 0.78 },
+        { label = "Compact", value = 0.85 },
+        { label = "Large", value = 0.92 },
+    }
 
     self.root = self:AddChild(TEMPLATES.ScreenRoot("betterinventory_sort_order_root"))
     self.bg = self.root:AddChild(TEMPLATES.BackgroundTint(0.82))
 
-    self.dialog = self.root:AddChild(TEMPLATES.RectangleWindow(980, 760))
+    self.dialog = self.root:AddChild(TEMPLATES.RectangleWindow(980, 820))
     local r, g, b = unpack(UICOLOURS.BROWN_DARK)
     self.dialog:SetBackgroundTint(r, g, b, 0.93)
 
     self.title = self.root:AddChild(Text(BUTTONFONT, 38, "PACK & SORT"))
     self.title:SetColour(UICOLOURS.GOLD_SELECTED)
-    self.title:SetPosition(0, 300)
+    self.title:SetPosition(0, 330)
 
     self.heading = self.root:AddChild(Text(CHATFONT, 27, "CATEGORY ORDER"))
     self.heading:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
-    self.heading:SetPosition(0, 266)
+    self.heading:SetPosition(0, 296)
 
     self.top_divider = self.root:AddChild(Image("images/global_redux.xml", "item_divider.tex"))
     self.top_divider:SetSize(900, 5)
-    self.top_divider:SetPosition(0, 242)
+    self.top_divider:SetPosition(0, 272)
 
     self.presets_label = self.root:AddChild(Text(CHATFONT, 23, "PRESETS"))
     self.presets_label:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
-    self.presets_label:SetPosition(-355, 212)
+    self.presets_label:SetPosition(-355, 242)
 
     self.categories_label = self.root:AddChild(Text(CHATFONT, 23, "CATEGORY ORDER"))
     self.categories_label:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
-    self.categories_label:SetPosition(145, 212)
+    self.categories_label:SetPosition(145, 242)
 
     self.preset_buttons = {}
     self.preset_descriptions = {}
@@ -74,7 +86,7 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         local button = self.root:AddChild(TEMPLATES.StandardButton(function()
             self:SwitchTab(selected_key)
         end, label, {220, 42}))
-        local y = 166 - (index - 1) * 62
+        local y = 196 - (index - 1) * 62
         button:SetPosition(-355, y)
         self.preset_buttons[key] = button
 
@@ -88,8 +100,8 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
 
     self.preset_note = self.root:AddChild(Text(CHATFONT, 19, ""))
     self.preset_note:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
-    self.preset_note:SetPosition(-355, -176)
-    self.preset_note:SetRegionSize(250, 86)
+    self.preset_note:SetPosition(-355, -150)
+    self.preset_note:SetRegionSize(250, 68)
     self.preset_note:EnableWordWrap(true)
     self.preset_note:SetHAlign(ANCHOR_LEFT)
 
@@ -101,33 +113,54 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         self:RefreshBagSortButton()
         self:RefreshNote()
     end, "", {250, 42}))
-    self.bag_sort_button:SetPosition(-355, -244)
+    self.bag_sort_button:SetPosition(-355, -210)
+
+    self.hud_label = self.root:AddChild(Text(CHATFONT, 18, "HUD VIEW"))
+    self.hud_label:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
+    self.hud_label:SetPosition(-355, -250)
+
+    self.hud_layout_button = self.root:AddChild(TEMPLATES.StandardButton(function()
+        self:ToggleHudLayout()
+    end, "", {132, 34}))
+    self.hud_layout_button:SetPosition(-426, -278)
+
+    self.hud_scale_button = self.root:AddChild(TEMPLATES.StandardButton(function()
+        self:CycleHudScale()
+    end, "", {132, 34}))
+    self.hud_scale_button:SetPosition(-284, -278)
 
     self.move_up_button = self.root:AddChild(TEMPLATES.StandardButton(function()
         self:MoveSelectedCategory(-1)
     end, "MOVE UP", {116, 36}))
-    self.move_up_button:SetPosition(332, 210)
+    self.move_up_button:SetPosition(332, 240)
 
     self.move_down_button = self.root:AddChild(TEMPLATES.StandardButton(function()
         self:MoveSelectedCategory(1)
     end, "MOVE DOWN", {126, 36}))
-    self.move_down_button:SetPosition(455, 210)
+    self.move_down_button:SetPosition(455, 240)
 
     self.selected_help = self.root:AddChild(Text(CHATFONT, 17,
-        "Select a row, then move it with buttons or arrow keys."))
+        "Drag a row onto another row, or select it and use Move buttons."))
     self.selected_help:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
-    self.selected_help:SetPosition(158, -250)
+    self.selected_help:SetPosition(158, -270)
     self.selected_help:SetRegionSize(560, 28)
 
     self.rows = {}
     for index = 1, #Categories.ORDER do
         local row_index = index
-        local y = 174 - (index - 1) * 34
+        local y = 204 - (index - 1) * 34
         local row = {}
         row.backing = self.root:AddChild(TEMPLATES.ListItemBackground(610, 31, function()
-            self:SelectRow(row_index)
+            self:ReleaseRowDrag(row_index)
         end))
+        row.backing.AllowOnControlWhenSelected = true
         row.backing:SetPosition(155, y)
+        row.backing:SetOnDown(function()
+            self:BeginRowDrag(row_index)
+        end)
+        row.backing:SetWhileDown(function()
+            self:UpdateRowDrag()
+        end)
 
         row.marker = self.root:AddChild(Text(CHATFONT, 20, ""))
         row.marker:SetColour(UICOLOURS.GOLD_SELECTED)
@@ -150,7 +183,7 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
 
     self.bottom_divider = self.root:AddChild(Image("images/global_redux.xml", "item_divider.tex"))
     self.bottom_divider:SetSize(900, 5)
-    self.bottom_divider:SetPosition(0, -266)
+    self.bottom_divider:SetPosition(0, -296)
 
     self.apply_button = self.root:AddChild(TEMPLATES.StandardButton(function()
         self:SaveCurrentDraft()
@@ -163,22 +196,23 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         end
         TheFrontEnd:PopScreen(self)
     end, "APPLY", {160, 48}))
-    self.apply_button:SetPosition(0, -312)
+    self.apply_button:SetPosition(0, -342)
 
     self.reset_button = self.root:AddChild(TEMPLATES.StandardButton(function()
         self:ResetCurrentTab()
     end, "RESET THIS PRESET", {220, 48}))
-    self.reset_button:SetPosition(230, -312)
+    self.reset_button:SetPosition(230, -342)
 
     self.cancel_button = self.root:AddChild(TEMPLATES.StandardButton(function()
         TheFrontEnd:PopScreen(self)
     end, "CANCEL", {160, 48}))
-    self.cancel_button:SetPosition(-210, -312)
+    self.cancel_button:SetPosition(-210, -342)
 
     self.default_focus = self.apply_button
     self:RefreshRows()
     self:RefreshPresetButtons()
     self:RefreshBagSortButton()
+    self:RefreshHudButtons()
     self:RefreshNote()
 end)
 
@@ -256,11 +290,144 @@ function SortOrderScreen:RefreshBagSortButton()
     end
 end
 
+function SortOrderScreen:GetHudLayoutLabel()
+    return self.hud_settings.layout == "vanilla" and "SINGLE ROW" or "2 x 12"
+end
+
+function SortOrderScreen:GetHudScaleLabel()
+    local current = tonumber(self.hud_settings.scale) or 0.85
+    for _, option in ipairs(self.hud_scale_options) do
+        if math.abs((tonumber(option.value) or 0) - current) < 0.001 then
+            return option.label
+        end
+    end
+    return tostring(current)
+end
+
+function SortOrderScreen:RefreshHudButtons()
+    self.hud_layout_button:SetText("HUD: " .. self:GetHudLayoutLabel())
+    self.hud_scale_button:SetText("SCALE: " .. self:GetHudScaleLabel():upper())
+
+    for _, button in ipairs({ self.hud_layout_button, self.hud_scale_button }) do
+        button:SetTextColour(0.12, 0.09, 0.04, 1)
+        button:SetTextFocusColour(0, 0, 0, 1)
+        button:SetImageNormalColour(0.74, 0.66, 0.48, 0.95)
+        button:SetImageFocusColour(0.95, 0.84, 0.56, 1)
+    end
+end
+
+function SortOrderScreen:ApplyHudSettings()
+    self:RefreshHudButtons()
+    if self.on_hud_change ~= nil then
+        self.on_hud_change({
+            layout = self.hud_settings.layout,
+            scale = self.hud_settings.scale,
+        })
+    end
+end
+
+function SortOrderScreen:ToggleHudLayout()
+    self.hud_settings.layout = self.hud_settings.layout == "vanilla" and "2x12"
+        or "vanilla"
+    self:ApplyHudSettings()
+end
+
+function SortOrderScreen:CycleHudScale()
+    local current = tonumber(self.hud_settings.scale) or 0.85
+    local next_index = 1
+
+    for index, option in ipairs(self.hud_scale_options) do
+        if math.abs((tonumber(option.value) or 0) - current) < 0.001 then
+            next_index = index + 1
+            break
+        end
+    end
+
+    if next_index > #self.hud_scale_options then
+        next_index = 1
+    end
+
+    self.hud_settings.scale = self.hud_scale_options[next_index].value
+    self:ApplyHudSettings()
+end
+
 function SortOrderScreen:SelectRow(index)
     if index < 1 or index > #self.order then
         return
     end
     self.selected_index = index
+    self:RefreshRows()
+end
+
+function SortOrderScreen:GetRowIndexUnderMouse()
+    if TheInput == nil or TheInput.GetScreenPosition == nil then
+        return nil
+    end
+
+    local mouse_pos = TheInput:GetScreenPosition()
+    if mouse_pos == nil then
+        return nil
+    end
+
+    for index, row in ipairs(self.rows) do
+        local row_pos = row.backing:GetWorldPosition()
+        if row_pos ~= nil
+            and math.abs(mouse_pos.x - row_pos.x) <= 305
+            and math.abs(mouse_pos.y - row_pos.y) <= 18 then
+            return index
+        end
+    end
+
+    return nil
+end
+
+function SortOrderScreen:BeginRowDrag(index)
+    self.drag_source_index = index
+    self.drag_target_index = index
+    self.selected_index = index
+    self:RefreshRows()
+end
+
+function SortOrderScreen:UpdateRowDrag()
+    if self.drag_source_index == nil then
+        return
+    end
+
+    local target = self:GetRowIndexUnderMouse()
+    if target ~= nil and target ~= self.drag_target_index then
+        self.drag_target_index = target
+        self.selected_index = target
+        self:RefreshRows()
+    end
+end
+
+function SortOrderScreen:ReleaseRowDrag(fallback_index)
+    if self.drag_source_index == nil then
+        self:SelectRow(fallback_index)
+        return
+    end
+
+    local source = self.drag_source_index
+    local target = self:GetRowIndexUnderMouse() or self.drag_target_index or source
+    self.drag_source_index = nil
+    self.drag_target_index = nil
+
+    if target ~= source then
+        self:MoveCategoryToIndex(source, target)
+    else
+        self:SelectRow(source)
+    end
+end
+
+function SortOrderScreen:MoveCategoryToIndex(source, target)
+    if source < 1 or source > #self.order or target < 1 or target > #self.order then
+        return
+    end
+
+    local category = table.remove(self.order, source)
+    table.insert(self.order, target, category)
+    self.selected_index = target
+    self.draft_orders[self.active_tab] = Categories.CopyOrder(self.order)
     self:RefreshRows()
 end
 

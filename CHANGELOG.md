@@ -10,8 +10,11 @@
 - HUD layout and inventory UI scale are now client-local preferences instead of
   server-wide world settings.
 - Polished the F8 sort-order panel with clearer preset descriptions, a cleaner
-  selectable category list, single Move Up/Move Down controls, keyboard
-  navigation, and simpler Apply/Reset wording.
+  selectable category list, drag/drop reordering, single Move Up/Move Down
+  controls, and simpler Apply/Reset wording.
+- Added client-local HUD view controls to the F8 panel so players can switch
+  between Single Row and 2 x 12 inventory layouts and cycle inventory UI scale
+  without changing server/world settings.
 
 ## v0.6.0 - Feature Release (2026-07-16)
 

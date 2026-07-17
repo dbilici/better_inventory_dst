@@ -92,6 +92,8 @@ https://github.com/dbilici/dst-pack-sort
 [*]Added a scaled Vanilla Single Row layout for expanded 24-slot inventories.
 [*]Kept Safe 2 x 12 as the compact two-row option for players who prefer it.
 [*]Made inventory HUD layout and scale client-local preferences instead of server-wide world settings.
+[*]Polished the F8 category order panel with drag/drop reordering and simpler Apply/Reset controls.
+[*]Added F8 panel controls for switching local HUD layout and cycling inventory UI scale in game.
 [*]Added the in-game category order panel with Default, Combat, Building, Survivor, and Anti Drop presets.
 [*]Added per-player persistent sort preferences and editable preset tabs.
 [*]Added Sort Bag Too, so the main sort hotkey can also sort the equipped bag in the same request.

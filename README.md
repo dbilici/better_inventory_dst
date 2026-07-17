@@ -18,7 +18,8 @@ Only while features and compatibility are still evolving.
 - Separate optional Bag, Armor, and Accessory equipment slots.
 - Deterministic category sorting with stack merging and condition ordering.
 - Craftable-item classification based on DST's native crafting filters.
-- In-game sort-order panel with persistent per-player category order.
+- In-game sort-order panel with drag/drop category reordering, persistent
+  per-player category order, and client-local HUD layout controls.
 - Separate sorting for the equipped bag, including while its UI is closed.
 - Persistent manual main-inventory slot locks.
 - Quick Stack into compatible stacks already present in the equipped bag.
