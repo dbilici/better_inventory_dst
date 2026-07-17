@@ -5,11 +5,10 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.7.0` adds a scaled vanilla single-row option and client-local HUD layout
-preferences for expanded 24-slot inventories on top of the configurable
-per-player sort presets, single-key inventory + bag sorting, and safer default
-hotkeys from `v0.6.0`. Pre-1.0 Workshop builds remain Friends Only while
-features and compatibility are still evolving.
+`v0.8.7` is a hotfix for an F8 sort-order panel focus-loop crash on top of the
+cleaner F8 panel, scaled vanilla single-row option, and client-local HUD layout
+preferences added in `v0.8.6`. Pre-1.0 Workshop builds remain Friends Only
+while features and compatibility are still evolving.
 
 ## Features
 
@@ -18,7 +17,8 @@ features and compatibility are still evolving.
 - Separate optional Bag, Armor, and Accessory equipment slots.
 - Deterministic category sorting with stack merging and condition ordering.
 - Craftable-item classification based on DST's native crafting filters.
-- In-game sort-order panel with persistent per-player category order.
+- In-game sort-order panel with drag/drop category reordering, persistent
+  per-player category order, and client-local HUD layout controls.
 - Separate sorting for the equipped bag, including while its UI is closed.
 - Persistent manual main-inventory slot locks.
 - Quick Stack into compatible stacks already present in the equipped bag.

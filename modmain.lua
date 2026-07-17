@@ -13,6 +13,7 @@
 
 local GLOBAL = GLOBAL
 local require = GLOBAL.require
+local MOD_NAME = modname
 
 local EQUIPSLOTS = GLOBAL.EQUIPSLOTS
 local HUD_ATLAS = GLOBAL.HUD_ATLAS
@@ -72,8 +73,6 @@ local CONFIG = {
 
 local MAX_ITEM_SLOTS = CONFIG.inventory_size == 24 and 24 or 15
 local USE_EXPANDED_INVENTORY = MAX_ITEM_SLOTS > 15
-local USE_2X12_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12"
-local USE_SCALED_SINGLE_ROW_LAYOUT = USE_EXPANDED_INVENTORY and CONFIG.inventory_layout ~= "2x12"
 local UI_SCALE = CONFIG.ui_scale or 0.85
 local CORE_PROTOCOL_VERSION = 5
 local CORE_RPC_NAMESPACE = "BetterInventoryCore"
@@ -717,6 +716,68 @@ end
 local INVENTORY_BG_TEX = "inventory_bg.tex"
 local INVENTORY_BG_WIDTH = 1352
 local INVENTORY_BG_HEIGHT = 204
+local RepositionExpandedInventoryBar
+local UI_SCALE_OPTIONS = {
+    { label = "Small", value = 0.78 },
+    { label = "Compact", value = 0.85 },
+    { label = "Large", value = 0.92 },
+}
+
+local function GetInventoryHudSettings()
+    return {
+        layout = CONFIG.inventory_layout == "vanilla" and "vanilla" or "2x12",
+        scale = UI_SCALE,
+    }
+end
+
+local function SaveClientInventoryHudSettings()
+    if GLOBAL.KnownModIndex == nil or MOD_NAME == nil then
+        return
+    end
+
+    local config_options = GLOBAL.KnownModIndex:LoadModConfigurationOptions(MOD_NAME, true)
+    if type(config_options) ~= "table" then
+        return
+    end
+
+    for _, option in ipairs(config_options) do
+        if option.name == "inventory_layout" then
+            option.saved = CONFIG.inventory_layout
+        elseif option.name == "ui_scale" then
+            option.saved = UI_SCALE
+        end
+    end
+
+    GLOBAL.KnownModIndex:SaveConfigurationOptions(function() end, MOD_NAME,
+        config_options, true)
+end
+
+local function ApplyInventoryHudSettings(settings, should_save)
+    if type(settings) ~= "table" then
+        return
+    end
+
+    if settings.layout == "vanilla" or settings.layout == "2x12" then
+        CONFIG.inventory_layout = settings.layout
+    end
+
+    local scale = GLOBAL.tonumber(settings.scale)
+    if scale ~= nil then
+        UI_SCALE = math.max(0.70, math.min(1.00, scale))
+        CONFIG.ui_scale = UI_SCALE
+    end
+
+    if ACTIVE_INVENTORY_BAR ~= nil then
+        RepositionExpandedInventoryBar(ACTIVE_INVENTORY_BAR)
+        if CONFIG.slot_lock_enabled then
+            RefreshSlotLockVisuals()
+        end
+    end
+
+    if should_save then
+        SaveClientInventoryHudSettings()
+    end
+end
 
 local function FitInventoryBarBackground(self, min_x, max_x, min_y, max_y)
     -- Keep a real background, but fit it to the active expanded layout.
@@ -748,7 +809,8 @@ local function FitInventoryBarBackground(self, min_x, max_x, min_y, max_y)
 end
 
 local function RepositionScaledSingleRowInventoryBar(self)
-    if not USE_SCALED_SINGLE_ROW_LAYOUT or self.inv == nil then
+    if not (USE_EXPANDED_INVENTORY and CONFIG.inventory_layout ~= "2x12")
+        or self.inv == nil then
         return
     end
 
@@ -757,7 +819,7 @@ local function RepositionScaledSingleRowInventoryBar(self)
     -- slots do not run into the right-side HUD.
     local SLOT_STEP = 64
     local EQUIP_GAP = 78
-    local single_row_scale = math.min(UI_SCALE, 0.78)
+    local single_row_scale = UI_SCALE
     local inventory_half_width = ((MAX_ITEM_SLOTS - 1) * SLOT_STEP) / 2
     local slot_half_size = 34
     local min_x = 999999
@@ -813,7 +875,8 @@ local function RepositionScaledSingleRowInventoryBar(self)
 end
 
 local function Reposition2x12InventoryBar(self)
-    if not USE_2X12_LAYOUT or self.inv == nil then
+    if not (USE_EXPANDED_INVENTORY and CONFIG.inventory_layout == "2x12")
+        or self.inv == nil then
         return
     end
 
@@ -891,7 +954,7 @@ local function Reposition2x12InventoryBar(self)
     end
 end
 
-local function RepositionExpandedInventoryBar(self)
+function RepositionExpandedInventoryBar(self)
     RepositionScaledSingleRowInventoryBar(self)
     Reposition2x12InventoryBar(self)
 end
@@ -899,7 +962,7 @@ end
 local inventory_bar_rebuild_patched = false
 
 AddClassPostConstruct("widgets/inventorybar", function(self)
-    if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+    if self.owner == GLOBAL.ThePlayer then
         ACTIVE_INVENTORY_BAR = self
     end
 
@@ -917,8 +980,10 @@ AddClassPostConstruct("widgets/inventorybar", function(self)
                 Rebuild_Base(self, ...)
                 AddExtraEquipSlotsToInventoryBar(self)
                 RepositionExpandedInventoryBar(self)
-                if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+                if self.owner == GLOBAL.ThePlayer then
                     ACTIVE_INVENTORY_BAR = self
+                end
+                if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
                     RefreshSlotLockVisuals()
                 end
             end
@@ -1142,6 +1207,9 @@ Sorting.Setup({
     slot_defs = SLOT_DEFS,
     debug_log = DebugLog,
     debug_warn = DebugWarn,
+    get_hud_settings = GetInventoryHudSettings,
+    apply_hud_settings = ApplyInventoryHudSettings,
+    hud_scale_options = UI_SCALE_OPTIONS,
     add_client_mod_rpc_handler = AddClientModRPCHandler,
     add_mod_rpc_handler = AddModRPCHandler,
 })

@@ -1,6 +1,16 @@
 # Changelog
 
-## v0.7.0 - Feature Release (2026-07-16)
+## v0.8.7 - Hotfix (2026-07-17)
+
+- Fixed an F8 sort-order panel stack overflow that could happen when row focus
+  changed while the panel refreshed selected category rows during drag or hover.
+- Category rows now draw their selected state with explicit colors instead of
+  toggling the native button selected state, avoiding DST focus recursion.
+- Made category drag/drop more forgiving by checking the mouse-up position,
+  widening the row hit target slightly, and falling back to the last valid drag
+  target when DST misses an intermediate drag frame.
+
+## v0.8.6 - Feature Release (2026-07-17)
 
 - Expanded 24-slot inventories can now keep the Vanilla layout as a scaled
   single row, preventing the long bar from overlapping the equipment cluster or
@@ -9,6 +19,14 @@
   `Vanilla Single Row` keeps one row, while `Safe 2 x 12` wraps to two rows.
 - HUD layout and inventory UI scale are now client-local preferences instead of
   server-wide world settings.
+- Polished the F8 sort-order panel with clearer preset descriptions, a cleaner
+  selectable category list, drag/drop reordering, single Move Up/Move Down
+  controls, and simpler Apply/Reset wording.
+- Added client-local HUD view controls to the F8 panel so players can switch
+  between Single Row and 2 x 12 inventory layouts and cycle inventory UI scale
+  without changing server/world settings.
+- Fixed drag/drop release handling in the F8 panel and made Single Row respect
+  the selected UI scale instead of staying capped at the small scale.
 
 ## v0.6.0 - Feature Release (2026-07-16)
 

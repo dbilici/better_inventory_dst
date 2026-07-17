@@ -2,7 +2,7 @@ name = "Pack & Sort"
 description = [[
 Expanded inventory + utility equipment slots + inventory sort for Don't Starve Together.
 
-Current v0.7.0 build:
+Current v0.8.7 build:
 - Optional 24-slot inventory foundation
 - Unified server/client/classified slot count for usable slots 16-24
 - Namespaced equipment slots to avoid collisions with other mods
@@ -18,6 +18,7 @@ Current v0.7.0 build:
 - Per-player option for the main sort hotkey to also sort the equipped bag
 - Default / Combat / Building / Survivor / Anti Drop sort presets
 - Independent editable preset tabs with per-tab reset and Apply All
+- Safer F8 panel row selection that avoids focus-loop stack overflows
 - Main sort hotkey can also sort the equipped bag when enabled per player
 - Optional Quick Stack fills compatible stacks already present in the equipped bag
 - Hover a main inventory slot and press a configurable key to lock it in place
@@ -31,7 +32,7 @@ Current v0.7.0 build:
 Quick Draw is intentionally removed because vanilla quick equip/swap already covers that use case.
 ]]
 author = "Dogan Bilici"
-version = "0.7.0"
+version = "0.8.7"
 api_version = 10
 priority = 100
 

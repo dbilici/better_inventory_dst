@@ -10,6 +10,9 @@ function Sorting.Setup(context)
     local SLOT_DEFS = assert(context.slot_defs, "slot definitions are required")
     local DebugLog = context.debug_log or function() end
     local DebugWarn = context.debug_warn or function() end
+    local GetHudSettings = context.get_hud_settings
+    local ApplyHudSettings = context.apply_hud_settings
+    local HudScaleOptions = context.hud_scale_options
     local AddClientModRPCHandler = context.add_client_mod_rpc_handler
     local AddModRPCHandler = context.add_mod_rpc_handler
     local TheNet = GLOBAL.TheNet
@@ -932,7 +935,12 @@ function Sorting.Setup(context)
                                 if ACTIVE_SORT_ORDER_SCREEN == screen then
                                     ACTIVE_SORT_ORDER_SCREEN = nil
                                 end
-                            end)
+                            end,
+                            GetHudSettings ~= nil and GetHudSettings() or nil,
+                            ApplyHudSettings ~= nil and function(settings)
+                                ApplyHudSettings(settings, true)
+                            end or nil,
+                            HudScaleOptions)
                         ACTIVE_SORT_ORDER_SCREEN = screen
                         GLOBAL.TheFrontEnd:PushScreen(screen)
                     end)

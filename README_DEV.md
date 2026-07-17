@@ -1,4 +1,4 @@
-# v0.7.0 maintenance checks
+# v0.8.7 maintenance checks
 
 1. Sort an inventory holding both condition-tracked and condition-less copies
    of the same prefab; the sort must complete and condition-less copies must
@@ -27,6 +27,17 @@
 10. With two clients on the same server, set one client to `Vanilla Single Row`
     and the other to `Safe 2 x 12`; verify each player keeps their own HUD
     layout without changing the server/world mod configuration.
+11. Open the F8 sort-order panel, click several category rows, move the selected
+    row with the shared Move Up/Move Down buttons, then drag a row onto another
+    row and verify the category moves to the drop position. Verify Apply saves
+    every preset draft and Reset This Preset only resets the active preset.
+12. In the F8 sort-order panel, toggle HUD view between `Single Row` and
+    `2 x 12`, then cycle UI scale. Verify the inventory HUD updates immediately
+    for the local player only and remains saved after reconnect/reload.
+13. In the F8 sort-order panel, click and drag across category rows repeatedly;
+    row highlighting must update without a warning screen or stack overflow.
+    Drop near row edges and release quickly a few times; the category should
+    still move to the intended highlighted row without needing a retry.
 
 ---
 
