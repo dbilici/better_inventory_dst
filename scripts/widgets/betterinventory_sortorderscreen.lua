@@ -164,9 +164,6 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         row.backing:SetWhileDown(function()
             self:UpdateRowDrag()
         end)
-        row.backing.ongainfocus = function()
-            self:HoverRow(row_index)
-        end
 
         row.marker = self.root:AddChild(Text(CHATFONT, 20, ""))
         row.marker:SetColour(UICOLOURS.GOLD_SELECTED)
@@ -510,17 +507,18 @@ function SortOrderScreen:RefreshRows()
             row.marker:SetString(">")
             row.number:SetColour(UICOLOURS.GOLD_SELECTED)
             row.label:SetColour(UICOLOURS.GOLD_SELECTED)
-            row.backing:Select()
-            row.backing:SetImageSelectedColour(0.95, 0.78, 0.36, 0.52)
+            row.backing:SetImageNormalColour(0.95, 0.78, 0.36, 0.52)
+            row.backing:SetImageFocusColour(0.95, 0.78, 0.36, 0.62)
         else
             row.marker:SetString("")
             row.number:SetColour(UICOLOURS.GOLD_UNIMPORTANT)
             row.label:SetColour(UICOLOURS.GOLD_CLICKABLE)
-            row.backing:Unselect()
             if index % 2 == 0 then
                 row.backing:SetImageNormalColour(0.75, 0.68, 0.55, 0.28)
+                row.backing:SetImageFocusColour(0.75, 0.68, 0.55, 0.38)
             else
                 row.backing:SetImageNormalColour(0.55, 0.48, 0.38, 0.24)
+                row.backing:SetImageFocusColour(0.55, 0.48, 0.38, 0.34)
             end
         end
     end
