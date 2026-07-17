@@ -50,6 +50,9 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         { label = "Compact", value = 0.85 },
         { label = "Large", value = 0.92 },
     }
+    self.special_mouse_control = TheInput:AddMouseButtonHandler(function(button, down, x, y)
+        return self:OnGlobalMouseButton(button, down, x, y)
+    end)
 
     self.root = self:AddChild(TEMPLATES.ScreenRoot("betterinventory_sort_order_root"))
     self.bg = self.root:AddChild(TEMPLATES.BackgroundTint(0.82))
@@ -161,6 +164,9 @@ local SortOrderScreen = Class(Screen, function(self, current_serialized, default
         row.backing:SetWhileDown(function()
             self:UpdateRowDrag()
         end)
+        row.backing.ongainfocus = function()
+            self:HoverRow(row_index)
+        end
 
         row.marker = self.root:AddChild(Text(CHATFONT, 20, ""))
         row.marker:SetColour(UICOLOURS.GOLD_SELECTED)
@@ -388,6 +394,20 @@ function SortOrderScreen:BeginRowDrag(index)
     self:RefreshRows()
 end
 
+function SortOrderScreen:HoverRow(index)
+    if self.drag_source_index == nil then
+        return
+    end
+    if index < 1 or index > #self.order then
+        return
+    end
+    if self.drag_target_index ~= index then
+        self.drag_target_index = index
+        self.selected_index = index
+        self:RefreshRows()
+    end
+end
+
 function SortOrderScreen:UpdateRowDrag()
     if self.drag_source_index == nil then
         return
@@ -399,6 +419,15 @@ function SortOrderScreen:UpdateRowDrag()
         self.selected_index = target
         self:RefreshRows()
     end
+end
+
+function SortOrderScreen:OnGlobalMouseButton(button, down)
+    if down or self.drag_source_index == nil then
+        return false
+    end
+
+    self:ReleaseRowDrag(self.drag_target_index or self.drag_source_index)
+    return true
 end
 
 function SortOrderScreen:ReleaseRowDrag(fallback_index)
@@ -537,6 +566,10 @@ function SortOrderScreen:OnControl(control, down)
 end
 
 function SortOrderScreen:OnDestroy()
+    if self.special_mouse_control ~= nil then
+        TheInput.onmousebutton:RemoveHandler(self.special_mouse_control)
+        self.special_mouse_control = nil
+    end
     if self.on_close ~= nil then
         self.on_close()
     end

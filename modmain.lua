@@ -819,7 +819,7 @@ local function RepositionScaledSingleRowInventoryBar(self)
     -- slots do not run into the right-side HUD.
     local SLOT_STEP = 64
     local EQUIP_GAP = 78
-    local single_row_scale = math.min(UI_SCALE, 0.78)
+    local single_row_scale = UI_SCALE
     local inventory_half_width = ((MAX_ITEM_SLOTS - 1) * SLOT_STEP) / 2
     local slot_half_size = 34
     local min_x = 999999
@@ -962,7 +962,7 @@ end
 local inventory_bar_rebuild_patched = false
 
 AddClassPostConstruct("widgets/inventorybar", function(self)
-    if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+    if self.owner == GLOBAL.ThePlayer then
         ACTIVE_INVENTORY_BAR = self
     end
 
@@ -980,8 +980,10 @@ AddClassPostConstruct("widgets/inventorybar", function(self)
                 Rebuild_Base(self, ...)
                 AddExtraEquipSlotsToInventoryBar(self)
                 RepositionExpandedInventoryBar(self)
-                if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
+                if self.owner == GLOBAL.ThePlayer then
                     ACTIVE_INVENTORY_BAR = self
+                end
+                if CONFIG.slot_lock_enabled and self.owner == GLOBAL.ThePlayer then
                     RefreshSlotLockVisuals()
                 end
             end

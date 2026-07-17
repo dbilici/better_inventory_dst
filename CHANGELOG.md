@@ -15,6 +15,8 @@
 - Added client-local HUD view controls to the F8 panel so players can switch
   between Single Row and 2 x 12 inventory layouts and cycle inventory UI scale
   without changing server/world settings.
+- Fixed drag/drop release handling in the F8 panel and made Single Row respect
+  the selected UI scale instead of staying capped at the small scale.
 
 ## v0.6.0 - Feature Release (2026-07-16)
 
