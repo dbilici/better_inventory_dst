@@ -1,6 +1,6 @@
 # Pack & Sort — Steam Workshop Copy
 
-This file contains ready-to-paste copy and the release checklist for `v0.8.0`.
+This file contains ready-to-paste copy and the release checklist for `v0.8.5`.
 It is not loaded by the mod.
 
 ## Title
@@ -65,7 +65,7 @@ validated by the server.
 
 [h2]Validation[/h2]
 
-Version 0.8.0 has passed automated sorting regression tests. The `v0.5.0`
+Version 0.8.5 has passed automated sorting regression tests. The `v0.5.0`
 multiplayer core was previously validated with host, dedicated-server, and
 three-player coverage including late join, reconnect, death/revive, bag
 operations, and Forest/Caves travel.
@@ -86,7 +86,7 @@ https://github.com/dbilici/dst-pack-sort
 
 ## Change notes
 
-[h1]v0.8.0[/h1]
+[h1]v0.8.5[/h1]
 
 [list]
 [*]Added a scaled Vanilla Single Row layout for expanded 24-slot inventories.
@@ -129,24 +129,24 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 
 - [x] Subscribe/upload account owns the Workshop item.
 - [x] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
-- [x] `modinfo.lua` reports `0.8.0` and API version 10.
+- [x] `modinfo.lua` reports `0.8.5` and API version 10.
 - [x] Preview image and screenshots match the current expanded inventory layouts.
 - [x] Workshop description and change notes are pasted from this file.
 - [x] Visibility remains Friends Only for this pre-1.0 release.
 - [x] Automated sorting regression suite passes.
-- [ ] Upload `v0.8.0` as Friends Only.
+- [ ] Upload `v0.8.5` as Friends Only.
 - [ ] Host smoke test passes after the uploaded copy is subscribed.
 - [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
 - [ ] If another player is available, confirm the subscribed copy joins cleanly.
 
-## v0.8.0 release checklist
+## v0.8.5 release checklist
 
-- [x] Update version references from `0.7.0` to `0.8.0`.
-- [x] Add v0.8.0 change notes.
+- [x] Update version references from `0.8.0` to `0.8.5`.
+- [x] Add v0.8.5 change notes.
 - [ ] Upload as Friends Only.
 - [ ] Smoke test the subscribed Workshop copy.
 - [ ] Confirm no `[Pack & Sort][WARN]` messages or Lua errors.
-- [ ] Tag `v0.8.0` after the uploaded copy is verified.
+- [ ] Tag `v0.8.5` after the uploaded copy is verified.
 - [x] Keep pre-1.0 Workshop visibility restricted to Friends Only.
 - [ ] Change Workshop visibility to Public with `v1.0.0`.
 
