@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lua 5.1 checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lua5.1
+
+      - name: Check Lua syntax
+        run: |
+          find . -name '*.lua' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 luac5.1 -p
+
+      - name: Run sorting regression tests
+        run: lua5.1 tests/sorting_spec.lua
+
+      - name: Check release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' modinfo.lua)"
+          test -n "$version"
+
+          grep -F "v$version" README.md
+          grep -F "## v$version" CHANGELOG.md
+          grep -F "v$version" WORKSHOP.md
