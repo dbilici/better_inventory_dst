@@ -5,17 +5,12 @@ organizes the inventory while keeping item movement server-authoritative.
 
 ## Release status
 
-`v0.8.8` keeps the F8 sort-order panel hotfix and adds a compact runtime status
-command plus safer configuration fallbacks aligned with the settings screen.
-It builds on the cleaner F8 panel, scaled vanilla single-row option, and
-client-local HUD layout
-preferences added in `v0.8.6`. Pre-1.0 Workshop builds remain Friends Only
-while features and compatibility are still evolving. The downloaded Workshop
-copy loads cleanly, but a release audit found that it does not contain the final
-drag/drop reliability changes or the `v0.8.8` diagnostics currently on `main`.
-Re-upload the clean source package and repeat the subscribed-copy host,
-Master/Caves and
-second-player late-join/reconnect checks before the `v1.0.0` Public release.
+`v0.8.8` is public on Steam Workshop. It keeps the F8 sort-order panel hotfix
+and adds a compact runtime status command plus safer configuration fallbacks
+aligned with the settings screen. It builds on the cleaner F8 panel, scaled
+vanilla single-row option, and client-local HUD layout preferences added in
+`v0.8.6`. The refreshed subscribed copy has been used on a multiplayer server
+without observed Lua errors.
 
 ## Features
 
