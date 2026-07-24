@@ -35,23 +35,31 @@ Assets = {
 -- Config
 --------------------------------------------------------------------------
 
+local function GetBooleanConfig(name, default_value)
+    local value = GetModConfigData(name)
+    if value == nil then
+        return default_value
+    end
+    return value ~= false
+end
+
 local CONFIG = {
     inventory_size = GetModConfigData("inventory_size") or 24,
     inventory_layout = GetModConfigData("inventory_layout", true) or "2x12",
     ui_scale = GetModConfigData("ui_scale", true) or 0.85,
-    slot_bag = GetModConfigData("slot_bag") ~= false,
-    slot_armor = GetModConfigData("slot_armor") ~= false,
-    slot_accessory = GetModConfigData("slot_accessory") ~= false,
-    sort_enabled = GetModConfigData("sort_enabled") ~= false,
-    bag_sort_enabled = GetModConfigData("bag_sort_enabled") ~= false,
+    slot_bag = GetBooleanConfig("slot_bag", true),
+    slot_armor = GetBooleanConfig("slot_armor", true),
+    slot_accessory = GetBooleanConfig("slot_accessory", true),
+    sort_enabled = GetBooleanConfig("sort_enabled", true),
+    bag_sort_enabled = GetBooleanConfig("bag_sort_enabled", true),
     sort_mode = GetModConfigData("sort_mode") or "category",
-    sort_merge_stacks = GetModConfigData("sort_merge_stacks") ~= false,
-    sort_key = GetModConfigData("sort_key") or "KEY_F5",
+    sort_merge_stacks = GetBooleanConfig("sort_merge_stacks", true),
+    sort_key = GetModConfigData("sort_key") or "KEY_F7",
     sort_order_key = GetModConfigData("sort_order_key") or "KEY_F8",
-    bag_sort_key = GetModConfigData("bag_sort_key") or "KEY_F6",
-    quick_stack_enabled = GetModConfigData("quick_stack_enabled") ~= false,
-    quick_stack_key = GetModConfigData("quick_stack_key") or "KEY_F7",
-    slot_lock_enabled = GetModConfigData("slot_lock_enabled") ~= false,
+    bag_sort_key = GetModConfigData("bag_sort_key") or "KEY_NONE",
+    quick_stack_enabled = GetBooleanConfig("quick_stack_enabled", false),
+    quick_stack_key = GetModConfigData("quick_stack_key") or "KEY_NONE",
+    slot_lock_enabled = GetBooleanConfig("slot_lock_enabled", true),
     slot_lock_key = GetModConfigData("slot_lock_key") or "KEY_L",
     debug_mode = GetModConfigData("debug_mode") or "off",
     sort_category_priorities = {
@@ -1213,6 +1221,44 @@ Sorting.Setup({
     add_client_mod_rpc_handler = AddClientModRPCHandler,
     add_mod_rpc_handler = AddModRPCHandler,
 })
+
+GLOBAL.PACK_SORT_DEBUG = function()
+    if GLOBAL.print == nil then
+        return
+    end
+
+    local side = "CLIENT"
+    if TheNet == nil then
+        side = "NO_NET"
+    elseif TheNet.IsDedicated ~= nil and TheNet:IsDedicated() then
+        side = "DEDICATED_SERVER"
+    elseif TheNet.GetIsServer ~= nil and TheNet:GetIsServer() then
+        side = "HOST_SERVER"
+    end
+
+    local prefix = "[Pack & Sort 0.8.8][" .. side .. "] "
+    GLOBAL.print(prefix
+        .. "protocol=" .. GLOBAL.tostring(CORE_PROTOCOL_VERSION)
+        .. ", slots=" .. GLOBAL.tostring(MAX_ITEM_SLOTS)
+        .. ", layout=" .. GLOBAL.tostring(CONFIG.inventory_layout)
+        .. ", scale=" .. GLOBAL.tostring(UI_SCALE))
+    GLOBAL.print(prefix
+        .. "equip: bag=" .. GLOBAL.tostring(CONFIG.slot_bag)
+        .. ", armor=" .. GLOBAL.tostring(CONFIG.slot_armor)
+        .. ", accessory=" .. GLOBAL.tostring(CONFIG.slot_accessory))
+    GLOBAL.print(prefix
+        .. "actions: sort=" .. GLOBAL.tostring(CONFIG.sort_enabled)
+        .. "@" .. GLOBAL.tostring(CONFIG.sort_key)
+        .. ", panel=" .. GLOBAL.tostring(CONFIG.sort_order_key)
+        .. ", bag_sort=" .. GLOBAL.tostring(CONFIG.bag_sort_enabled)
+        .. "@" .. GLOBAL.tostring(CONFIG.bag_sort_key)
+        .. ", quick_stack=" .. GLOBAL.tostring(CONFIG.quick_stack_enabled)
+        .. "@" .. GLOBAL.tostring(CONFIG.quick_stack_key)
+        .. ", slot_locks=" .. GLOBAL.tostring(CONFIG.slot_lock_enabled)
+        .. "@" .. GLOBAL.tostring(CONFIG.slot_lock_key)
+        .. ", debug_mode=" .. GLOBAL.tostring(CONFIG.debug_mode))
+end
+
 DebugLog("Loaded multiplayer core. Protocol=" .. tostring(CORE_PROTOCOL_VERSION)
     .. ", inventory slots=" .. tostring(MAX_ITEM_SLOTS)
     .. ", layout=" .. tostring(CONFIG.inventory_layout)

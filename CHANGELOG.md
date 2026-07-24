@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.8 - Diagnostics and configuration hardening (2026-07-24)
+
+- Added the `PACK_SORT_DEBUG()` console command for a compact runtime,
+  protocol, layout, equipment-slot, action, hotkey, and debug-mode report.
+- Aligned missing-value fallbacks with the defaults shown in the configuration
+  screen, including F7/F8, disabled bag-only/Quick Stack hotkeys, and Quick
+  Stack disabled by default.
+- Expanded the Workshop configuration and troubleshooting documentation.
+
 ## v0.8.7 - Hotfix (2026-07-17)
 
 - Fixed an F8 sort-order panel stack overflow that could happen when row focus

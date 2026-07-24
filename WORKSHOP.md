@@ -1,6 +1,6 @@
 # Pack & Sort — Steam Workshop Copy
 
-This file contains ready-to-paste copy and the release checklist for `v0.8.7`.
+This file contains ready-to-paste copy and the release checklist for `v0.8.8`.
 It is not loaded by the mod.
 
 ## Title
@@ -51,6 +51,26 @@ hotkeys are detected and the secondary action is disabled instead of running
 two operations at once. Quick Stack and a separate bag-only sort key remain
 configurable, but the default setup only uses F7 and F8.
 
+[h2]Main configuration[/h2]
+
+[table]
+[tr][th]Setting[/th][th]Choices[/th][th]Default[/th][/tr]
+[tr][td]Inventory Size[/td][td]Vanilla 15 / Expanded 24[/td][td]Expanded 24[/td][/tr]
+[tr][td]Inventory Layout (per player)[/td][td]Vanilla Single Row / Safe 2 x 12[/td][td]Safe 2 x 12[/td][/tr]
+[tr][td]Inventory UI Scale (per player)[/td][td]Small / Compact / Large[/td][td]Compact[/td][/tr]
+[tr][td]Bag / Armor / Accessory slots[/td][td]Each enabled separately[/td][td]Enabled[/td][/tr]
+[tr][td]Sort Mode[/td][td]Compact Only / Category Sort[/td][td]Category Sort[/td][/tr]
+[tr][td]Merge Stacks on Sort[/td][td]Disabled / Enabled[/td][td]Enabled[/td][/tr]
+[tr][td]Equipped Bag Sort[/td][td]Disabled / Enabled[/td][td]Enabled[/td][/tr]
+[tr][td]Quick Stack to Bag[/td][td]Disabled / Enabled[/td][td]Disabled[/td][/tr]
+[tr][td]Manual Slot Locks[/td][td]Disabled / Enabled[/td][td]Enabled[/td][/tr]
+[tr][td]Debug Mode[/td][td]Off / Log Only / Chat + Log[/td][td]Off[/td][/tr]
+[/table]
+
+All action hotkeys are configurable. Advanced host defaults can assign each of
+the 13 sort categories a priority from 1 (first) to 13 (last); each player can
+then keep separate persistent orders for the in-game preset tabs.
+
 [h2]Quick Stack behavior[/h2]
 
 Quick Stack only fills compatible stacks that already exist in the equipped
@@ -65,10 +85,13 @@ validated by the server.
 
 [h2]Validation[/h2]
 
-Version 0.8.7 has passed automated sorting regression tests. The `v0.5.0`
-multiplayer core was previously validated with host, dedicated-server, and
-three-player coverage including late join, reconnect, death/revive, bag
-operations, and Forest/Caves travel.
+Current Workshop refresh target: [b]v0.8.8[/b]. All Lua sources and the clean
+runtime package passed syntax and checksum validation on 24 July 2026.
+Automated sorting regression tests passed on the preceding v0.8.7 code; v0.8.8
+only adds diagnostics and aligns missing-value fallbacks with the defaults shown
+in the Mods screen. The v0.5.0 multiplayer core was previously validated with
+host, dedicated-server, and three-player coverage including late join,
+reconnect, death/revive, bag operations, and Forest/Caves travel.
 
 [h2]Compatibility[/h2]
 
@@ -79,16 +102,23 @@ the base inventory size, or redefine equipment slots may conflict.
 [h2]Feedback and bug reports[/h2]
 
 Please include the host and client logs, enabled mod list, world type, and exact
-steps needed to reproduce the problem.
+steps needed to reproduce the problem. Run
+[code]PACK_SORT_DEBUG()[/code] on the affected runtime and include its three
+status lines; it reports the effective protocol, layout, slots, actions, and
+hotkeys without changing the world. [b]Chat + Log[/b] broadcasts debug lines
+from the host, so prefer [b]Log Only[/b] unless everyone in the test world
+expects diagnostic chat.
 
 Source and issue tracker:
 https://github.com/dbilici/dst-pack-sort
 
 ## Change notes
 
-[h1]v0.8.7[/h1]
+[h1]v0.8.8[/h1]
 
 [list]
+[*]Added PACK_SORT_DEBUG() for a compact protocol, layout, slot, action, hotkey, and debug-mode report.
+[*]Aligned missing configuration fallbacks with the defaults shown in the Mods screen.
 [*]Fixed an F8 category order panel stack overflow caused by row focus changes during panel refresh.
 [*]Made F8 category drag/drop more forgiving when releasing quickly or near row edges.
 [*]Added a scaled Vanilla Single Row layout for expanded 24-slot inventories.
@@ -106,8 +136,13 @@ https://github.com/dbilici/dst-pack-sort
 [*]Hardened sorting stability for mixed condition-tracked and condition-less items.
 [/list]
 
-Validated with automated sorting regression coverage. Keep this pre-1.0 build
-Friends Only while the subscribed Workshop copy is smoke-tested.
+Validated with automated sorting regression coverage. An earlier `v0.8.7` Workshop copy
+was uploaded and passed a host smoke test on 2026-07-20, but the 2026-07-23
+release audit found that the downloaded copy does not contain the final
+drag/drop reliability changes or the `v0.8.8` diagnostics currently on `main`.
+Re-upload the clean source
+package and keep this pre-1.0 build Friends Only until the refreshed
+subscribed-copy checks are complete.
 
 ## Workshop visibility policy
 
@@ -131,24 +166,28 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 
 - [x] Subscribe/upload account owns the Workshop item.
 - [x] Mod folder contains no save data, logs, `.DS_Store`, or development cache.
-- [x] `modinfo.lua` reports `0.8.7` and API version 10.
+- [x] `modinfo.lua` reports `0.8.8` and API version 10.
 - [x] Preview image and screenshots match the current expanded inventory layouts.
 - [x] Workshop description and change notes are pasted from this file.
 - [x] Visibility remains Friends Only for this pre-1.0 release.
 - [x] Automated sorting regression suite passes.
-- [ ] Upload `v0.8.7` as Friends Only.
-- [ ] Host smoke test passes after the uploaded copy is subscribed.
-- [ ] Dedicated server loads the subscribed Workshop copy without Lua errors.
+- [x] Upload an earlier `v0.8.7` build as Friends Only.
+- [ ] Upload the clean current `v0.8.8` source package so the Workshop copy
+  includes the final drag/drop reliability changes and diagnostics.
+- [ ] Host smoke test passes after the refreshed copy is subscribed.
+- [ ] Master and Caves load the refreshed subscribed copy without Lua errors.
 - [ ] If another player is available, confirm the subscribed copy joins cleanly.
+- [ ] Confirm late join, reconnect and Forest/Caves travel on `v0.8.8`.
 
-## v0.8.7 release checklist
+## v0.8.8 release checklist
 
-- [x] Update version references from `0.8.6` to `0.8.7`.
-- [x] Add v0.8.7 change notes.
+- [x] Update source version references to `0.8.8`.
+- [x] Add v0.8.8 change notes.
 - [ ] Upload as Friends Only.
-- [ ] Smoke test the subscribed Workshop copy.
-- [ ] Confirm no `[Pack & Sort][WARN]` messages or Lua errors.
-- [ ] Tag `v0.8.7` after the uploaded copy is verified.
+- [ ] Re-upload and smoke test the current clean source package.
+- [ ] Confirm no `[Pack & Sort][WARN]` messages or Lua errors after that
+  refreshed upload.
+- [ ] Tag `v0.8.8` after the uploaded copy is verified.
 - [x] Keep pre-1.0 Workshop visibility restricted to Friends Only.
 - [ ] Change Workshop visibility to Public with `v1.0.0`.
 
@@ -160,3 +199,9 @@ Do not use debug chat or developer overlays in the Workshop screenshots.
 - 2026-07-05: Three players completed late-join, reconnect, death/revive, bag
   operations, and Forest/Caves tests without observed problems or replication
   warnings. GitHub issue #3 is complete.
+- 2026-07-20: Uploaded and subscribed to a `v0.8.7` copy; the owner confirmed
+  the host smoke test.
+- 2026-07-23: Existing Master and Caves logs were reviewed. That downloaded
+  `v0.8.7` copy loaded without Pack & Sort warnings or Lua errors, but a file
+  comparison showed it lacks the final drag/drop reliability changes on
+  `main`. Re-upload and all refreshed-copy checks remain required.
